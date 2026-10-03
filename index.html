@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bovine Estrus & Behavioral Telemetry</title>
+  
+  <!-- Supabase JS Client & Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --subtext: #94a3b8;
+      --primary: #38bdf8;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      background-color: var(--success);
+      border-radius: 50%;
+      animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .grid-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .card-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .status-alert {
+      color: var(--danger);
+    }
+
+    .status-normal {
+      color: var(--success);
+    }
+
+    .chart-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 24px;
+      height: 380px;
+    }
+
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--subtext);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .tag-heat { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .tag-normal { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Bovine Estrus Telemetry Dashboard</h1>
+        <p style="color: var(--subtext); font-size: 0.85rem; margin-top: 4px;">Node ID: <span id="node-id">Scanning...</span></p>
+      </div>
+      <div class="badge-live">
+        <div class="pulse"></div> Realtime Socket Active
+      </div>
+    </header>
+
+    <!-- Top Telemetry Row -->
+    <div class="grid-metrics">
+      <div class="card">
+        <div class="card-title">Estrus Classification</div>
+        <div class="card-value" id="estrus-status">--</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Detection Confidence</div>
+        <div class="card-value" id="estrus-confidence">0.0%</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Active Time (Others)</div>
+        <div class="card-value" id="active-time">0.0 min</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Last Ingestion</div>
+        <div class="card-value" id="last-updated" style="font-size: 1.1rem; padding-top: 6px;">--</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-container">
+      <canvas id="behaviorChart"></canvas>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Node ID</th>
+            <th>Eating</th>
+            <th>Lying</th>
+            <th>Lying Rum.</th>
+            <th>Standing Rum.</th>
+            <th>Others (Active)</th>
+            <th>Heat Status</th>
+          </tr>
+        </thead>
+        <tbody id="telemetry-body">
+          <tr><td colspan="8" style="text-align: center; color: var(--subtext);">Fetching sensor records...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://fqvkjulnfmevufqxfyqt.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_pfsmnN_CY5YWQPYRohZ-Yg_7o1wtNgZ";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let chartInstance = null;
+
+    function initChart() {
+      const ctx = document.getElementById("behaviorChart").getContext("2d");
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: [],
+          datasets: [
+            { label: "Eating", data: [], backgroundColor: "#10b981" },
+            { label: "Lying", data: [], backgroundColor: "#64748b" },
+            { label: "Lying Rumination", data: [], backgroundColor: "#f59e0b" },
+            { label: "Standing Rumination", data: [], backgroundColor: "#d97706" },
+            { label: "Others (Active)", data: [], backgroundColor: "#ef4444" }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true, grid: { color: "#334155" }, ticks: { color: "#94a3b8" } },
+            y: { stacked: true, grid: { color: "#334155" }, ticks: { color: "#94a3b8" }, title: { display: true, text: "Minutes", color: "#94a3b8" } }
+          },
+          plugins: {
+            legend: { labels: { color: "#f8fafc" } }
+          }
+        }
+      });
+    }
+
+    function renderUI(data) {
+      if (!data || data.length === 0) return;
+
+      const latest = data[0];
+      
+      // Update Metrics
+      document.getElementById("node-id").textContent = latest.cow_id;
+      const statusEl = document.getElementById("estrus-status");
+      if (latest.heat_detected) {
+        statusEl.textContent = "ESTRUS / HEAT";
+        statusEl.className = "card-value status-alert";
+      } else {
+        statusEl.textContent = "NORMAL (Non-Heat)";
+        statusEl.className = "card-value status-normal";
+      }
+
+      document.getElementById("estrus-confidence").textContent = `${(latest.heat_confidence * 100).toFixed(1)}%`;
+      document.getElementById("active-time").textContent = `${latest.others_minutes} min`;
+      document.getElementById("last-updated").textContent = new Date(latest.recorded_at).toLocaleTimeString();
+
+      // Update Chart (Reverse array to render chronological left-to-right)
+      const chronological = [...data].reverse();
+      chartInstance.data.labels = chronological.map(d => new Date(d.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      chartInstance.data.datasets[0].data = chronological.map(d => d.eating_minutes);
+      chartInstance.data.datasets[1].data = chronological.map(d => d.lying_minutes);
+      chartInstance.data.datasets[2].data = chronological.map(d => d.lying_rumination_minutes);
+      chartInstance.data.datasets[3].data = chronological.map(d => d.standing_rumination_minutes);
+      chartInstance.data.datasets[4].data = chronological.map(d => d.others_minutes);
+      chartInstance.update();
+
+      // Update Table
+      const tbody = document.getElementById("telemetry-body");
+      tbody.innerHTML = "";
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${new Date(row.recorded_at).toLocaleString()}</td>
+          <td>${row.cow_id}</td>
+          <td>${row.eating_minutes}m</td>
+          <td>${row.lying_minutes}m</td>
+          <td>${row.lying_rumination_minutes}m</td>
+          <td>${row.standing_rumination_minutes}m</td>
+          <td>${row.others_minutes}m</td>
+          <td><span class="tag ${row.heat_detected ? 'tag-heat' : 'tag-normal'}">${row.heat_detected ? 'ESTRUS' : 'NORMAL'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadTelemetry() {
+      const { data, error } = await supabaseClient
+        .from("cow_behavior_summary")
+        .select("*")
+        .order("recorded_at", { ascending: false })
+        .limit(15);
+
+      if (!error && data) {
+        renderUI(data);
+      }
+    }
+
+    function subscribeRealtime() {
+      supabaseClient
+        .channel("table-db-changes")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "cow_behavior_summary" },
+          () => {
+            loadTelemetry();
+          }
+        )
+        .subscribe();
+    }
+
+    // Startup
+    window.addEventListener("DOMContentLoaded", () => {
+      initChart();
+      loadTelemetry();
+      subscribeRealtime();
+    });
+  </script>
+</body>
+</html>
