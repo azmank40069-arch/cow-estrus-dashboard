@@ -228,14 +228,14 @@
                             <div class="text-slate-400 text-sm mb-1"><i class="fa-solid fa-server mr-2"></i>Active Nodes</div>
                             <div class="text-3xl font-bold">${totalCows}</div>
                         </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl">
+                            <div class="text-slate-400 text-sm mb-1"><i class="fa-solid fa-server mr-2"></i>Active Nodes</div>
+                            <div class="text-3xl font-bold">${totalCows}</div>
+                        </div>
                         <div class="bg-dark-800 border ${cowsInHeat > 0 ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-dark-700'} p-6 rounded-2xl">
                             <div class="text-slate-400 text-sm mb-1"><i class="fa-solid fa-fire mr-2"></i>Active Estrus Alerts</div>
                             <div class="text-3xl font-bold ${cowsInHeat > 0 ? 'text-red-500' : 'text-emerald-500'}">${cowsInHeat}</div>
-                        </div>
-                        <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl">
-                            <div class="text-slate-400 text-sm mb-1"><i class="fa-solid fa-microchip mr-2"></i>Inference Model</div>
-                            <div class="text-xl font-bold mt-1">Random Forest V2</div>
-                            <div class="text-xs text-brand-500 mt-1">TinyML Ready</div>
                         </div>
                     </div>
 
@@ -339,7 +339,7 @@
                         { label: 'Lying', data: chartData.map(d => d.lying_minutes), backgroundColor: '#64748b' },
                         { label: 'Lying Rum.', data: chartData.map(d => d.lying_rumination_minutes), backgroundColor: '#f59e0b' },
                         { label: 'Standing Rum.', data: chartData.map(d => d.standing_rumination_minutes), backgroundColor: '#d97706' },
-                        { label: 'Active (Walk/Other)', data: chartData.map(d => d.others_minutes), backgroundColor: '#ef4444' }
+                        { label: 'Active (Others)', data: chartData.map(d => d.others_minutes), backgroundColor: '#ef4444' }
                     ]
                 },
                 options: {
@@ -383,7 +383,7 @@
                                     <li class="flex justify-between"><span class="text-slate-400">IMU Sensor</span> <span class="font-medium text-white">DFRobot BMI160</span></li>
                                     <li class="flex justify-between"><span class="text-slate-400">Sampling Rate</span> <span class="font-medium text-white">10 Hz</span></li>
                                     <li class="flex justify-between"><span class="text-slate-400">Comms</span> <span class="font-medium text-white">ESP-NOW / Wi-Fi</span></li>
-                                    <li class="flex justify-between"><span class="text-slate-400">Deep Sleep</span> <span class="font-medium text-emerald-400">Enabled</span></li>
+                                    <li class="flex justify-between"><span class="text-slate-400">Placement</span> <span class="font-medium text-brand-500">Right Neck</span></li>
                                 </ul>
                             </div>
                             
@@ -432,12 +432,12 @@
             fillLight.position.set(-10, 0, -10);
             scene.add(fillLight);
 
-            // --- Building the Enclosure Model (Based on image_d68341.png) ---
+            // --- Building the Enclosure Model ---
             const enclosureGroup = new THREE.Group();
 
             // Materials
-            const greenMat = new THREE.MeshStandardMaterial({ 
-                color: 0x3b9b4a, roughness: 0.7, metalness: 0.1 
+            const whiteMat = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff, roughness: 0.5, metalness: 0.1 
             });
             const darkMat = new THREE.MeshStandardMaterial({ 
                 color: 0x2d2d2d, roughness: 0.8 
@@ -446,48 +446,61 @@
                 color: 0xd98a44, roughness: 0.6 
             });
 
-            // 1. Main Box Shell (Simulated hollow by combining boxes)
-            const length = 5; const width = 2.5; const height = 2;
+            // 1. Main Box Shell (Rounded White Enclosure)
+            const length = 5; const width = 2.5; const height = 2; const radius = 0.5;
             
-            // Outer solid box for simplicity, with a dark "lid" area to fake hollowness
-            const mainGeom = new THREE.BoxGeometry(length, height, width);
-            const mainBox = new THREE.Mesh(mainGeom, greenMat);
+            // Draw a rounded rectangle shape
+            const roundedRect = new THREE.Shape();
+            const x = length / 2;
+            const y = width / 2;
+            roundedRect.moveTo(-x + radius, -y);
+            roundedRect.lineTo(x - radius, -y);
+            roundedRect.quadraticCurveTo(x, -y, x, -y + radius);
+            roundedRect.lineTo(x, y - radius);
+            roundedRect.quadraticCurveTo(x, y, x - radius, y);
+            roundedRect.lineTo(-x + radius, y);
+            roundedRect.quadraticCurveTo(-x, y, -x, y - radius);
+            roundedRect.lineTo(-x, -y + radius);
+            roundedRect.quadraticCurveTo(-x, -y, -x + radius, -y);
+
+            const boxExtrudeSettings = {
+                depth: height,
+                bevelEnabled: true,
+                bevelSegments: 4,
+                steps: 1,
+                bevelSize: 0.05,
+                bevelThickness: 0.05
+            };
+
+            const mainGeom = new THREE.ExtrudeGeometry(roundedRect, boxExtrudeSettings);
+            mainGeom.center(); // Center the geometry geometry
+            const mainBox = new THREE.Mesh(mainGeom, whiteMat);
+            
+            // Extrude goes along Z, so we rotate X to lay it flat
+            mainBox.rotation.x = -Math.PI / 2;
             enclosureGroup.add(mainBox);
 
             // Fake Hollow Top (Dark plane just above the top surface)
-            const topGeom = new THREE.PlaneGeometry(length - 0.4, width - 0.4);
+            const topGeom = new THREE.PlaneGeometry(length - 0.5, width - 0.5);
             const topPlane = new THREE.Mesh(topGeom, new THREE.MeshBasicMaterial({color: 0x111111}));
             topPlane.rotation.x = -Math.PI / 2;
-            topPlane.position.y = height / 2 + 0.01;
+            topPlane.position.y = height / 2 + 0.02; // Placed at the top edge
             enclosureGroup.add(topPlane);
 
-            // 2. Corner Screw Posts (Dark grey cylinders)
-            const postGeom = new THREE.CylinderGeometry(0.2, 0.2, height * 0.8, 16);
-            const positions = [
-                [length/2, width/2], [-length/2, width/2],
-                [length/2, -width/2], [-length/2, -width/2]
-            ];
-            positions.forEach(pos => {
-                const post = new THREE.Mesh(postGeom, darkMat);
-                post.position.set(pos[0], height/2 - (height*0.8)/2 + 0.2, pos[1]);
-                enclosureGroup.add(post);
-            });
-
-            // 3. Side Strap Loop (Orange/Brown box with a hole)
-            // Using a simple torus segment or constructed box for the loop
+            // 2. Side Strap Loop (Orange/Brown box with a hole)
             const loopGeom = new THREE.BoxGeometry(0.4, 1.2, 1);
             const loopMesh = new THREE.Mesh(loopGeom, orangeMat);
-            loopMesh.position.set(-length/2 - 0.2, 0, 0);
+            loopMesh.position.set(-length/2 - 0.1, 0, 0);
             
-            // Cutout fake
+            // Cutout fake for strap hole
             const holeGeom = new THREE.BoxGeometry(0.5, 0.8, 0.6);
-            const holeMesh = new THREE.Mesh(holeGeom, new THREE.MeshBasicMaterial({color: 0x0f172a})); // match background
-            holeMesh.position.set(-length/2 - 0.2, 0, 0);
+            const holeMesh = new THREE.Mesh(holeGeom, new THREE.MeshBasicMaterial({color: 0x0f172a})); // matches background
+            holeMesh.position.set(-length/2 - 0.1, 0, 0);
             
             enclosureGroup.add(loopMesh);
-            enclosureGroup.add(holeMesh); // Visual trick for the hole
+            enclosureGroup.add(holeMesh);
 
-            // 4. Direction Arrow (Etched on side)
+            // 3. Direction Arrow (Etched on side)
             const arrowShape = new THREE.Shape();
             arrowShape.moveTo(0, 0.2);
             arrowShape.lineTo(0.5, 0.2);
@@ -498,10 +511,11 @@
             arrowShape.lineTo(0, -0.2);
             arrowShape.lineTo(0, 0.2);
             
-            const extrudeSettings = { depth: 0.05, bevelEnabled: false };
-            const arrowGeom = new THREE.ExtrudeGeometry(arrowShape, extrudeSettings);
+            const arrowExtrude = { depth: 0.05, bevelEnabled: false };
+            const arrowGeom = new THREE.ExtrudeGeometry(arrowShape, arrowExtrude);
             const arrowMesh = new THREE.Mesh(arrowGeom, darkMat);
-            arrowMesh.position.set(0, 0, width/2); // Front face
+            // Placed slightly outside the width so it sits on the surface
+            arrowMesh.position.set(-0.45, 0, width/2 + 0.02); 
             enclosureGroup.add(arrowMesh);
 
             scene.add(enclosureGroup);
