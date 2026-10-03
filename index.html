@@ -1,348 +1,577 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bovine Estrus & Behavioral Telemetry</title>
-  
-  <!-- Supabase JS Client & Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bovine AI Telemetry</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase, Chart.js, and Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <style>
-    :root {
-      --bg: #0b1120;
-      --card-bg: #1e293b;
-      --border: #334155;
-      --text: #f8fafc;
-      --subtext: #94a3b8;
-      --primary: #38bdf8;
-      --danger: #ef4444;
-      --success: #10b981;
-      --warning: #f59e0b;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      padding: 24px;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 16px;
-    }
-
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.025em;
-    }
-
-    .badge-live {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--success);
-      padding: 6px 12px;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .pulse {
-      width: 8px;
-      height: 8px;
-      background-color: var(--success);
-      border-radius: 50%;
-      animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-    }
-
-    @keyframes pulse-ring {
-      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-
-    .grid-metrics {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-    }
-
-    .card-title {
-      font-size: 0.75rem;
-      color: var(--subtext);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 8px;
-    }
-
-    .card-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-
-    .status-alert {
-      color: var(--danger);
-    }
-
-    .status-normal {
-      color: var(--success);
-    }
-
-    .chart-container {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 24px;
-      height: 380px;
-    }
-
-    .table-container {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 0.85rem;
-    }
-
-    th {
-      background: rgba(255, 255, 255, 0.02);
-      color: var(--subtext);
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      font-weight: 600;
-    }
-
-    td {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    .tag {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      display: inline-block;
-    }
-
-    .tag-heat { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-    .tag-normal { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <div>
-        <h1>Bovine Estrus Telemetry Dashboard</h1>
-        <p style="color: var(--subtext); font-size: 0.85rem; margin-top: 4px;">Node ID: <span id="node-id">Scanning...</span></p>
-      </div>
-      <div class="badge-live">
-        <div class="pulse"></div> Realtime Socket Active
-      </div>
-    </header>
-
-    <!-- Top Telemetry Row -->
-    <div class="grid-metrics">
-      <div class="card">
-        <div class="card-title">Estrus Classification</div>
-        <div class="card-value" id="estrus-status">--</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Detection Confidence</div>
-        <div class="card-value" id="estrus-confidence">0.0%</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Active Time (Others)</div>
-        <div class="card-value" id="active-time">0.0 min</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Last Ingestion</div>
-        <div class="card-value" id="last-updated" style="font-size: 1.1rem; padding-top: 6px;">--</div>
-      </div>
-    </div>
-
-    <!-- Chart -->
-    <div class="chart-container">
-      <canvas id="behaviorChart"></canvas>
-    </div>
-
-    <!-- Table -->
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>Node ID</th>
-            <th>Eating</th>
-            <th>Lying</th>
-            <th>Lying Rum.</th>
-            <th>Standing Rum.</th>
-            <th>Others (Active)</th>
-            <th>Heat Status</th>
-          </tr>
-        </thead>
-        <tbody id="telemetry-body">
-          <tr><td colspan="8" style="text-align: center; color: var(--subtext);">Fetching sensor records...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <script>
-    const SUPABASE_URL = "https://fqvkjulnfmevufqxfyqt.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_pfsmnN_CY5YWQPYRohZ-Yg_7o1wtNgZ";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let chartInstance = null;
-
-    function initChart() {
-      const ctx = document.getElementById("behaviorChart").getContext("2d");
-      chartInstance = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: [],
-          datasets: [
-            { label: "Eating", data: [], backgroundColor: "#10b981" },
-            { label: "Lying", data: [], backgroundColor: "#64748b" },
-            { label: "Lying Rumination", data: [], backgroundColor: "#f59e0b" },
-            { label: "Standing Rumination", data: [], backgroundColor: "#d97706" },
-            { label: "Others (Active)", data: [], backgroundColor: "#ef4444" }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { stacked: true, grid: { color: "#334155" }, ticks: { color: "#94a3b8" } },
-            y: { stacked: true, grid: { color: "#334155" }, ticks: { color: "#94a3b8" }, title: { display: true, text: "Minutes", color: "#94a3b8" } }
-          },
-          plugins: {
-            legend: { labels: { color: "#f8fafc" } }
-          }
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 500: '#38bdf8', 600: '#0284c7' },
+                        dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }
+                    }
+                }
+            }
         }
-      });
-    }
+    </script>
+    <style>
+        /* Custom Scrollbar & Animations */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        #canvas-container { width: 100%; height: 400px; cursor: grab; }
+        #canvas-container:active { cursor: grabbing; }
 
-    function renderUI(data) {
-      if (!data || data.length === 0) return;
+        .pulse-dot {
+            height: 10px; width: 10px; border-radius: 50%; display: inline-block;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 1);
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+    </style>
+</head>
+<body class="bg-dark-900 text-slate-200 font-sans antialiased overflow-hidden flex h-screen">
 
-      const latest = data[0];
-      
-      // Update Metrics
-      document.getElementById("node-id").textContent = latest.cow_id;
-      const statusEl = document.getElementById("estrus-status");
-      if (latest.heat_detected) {
-        statusEl.textContent = "ESTRUS / HEAT";
-        statusEl.className = "card-value status-alert";
-      } else {
-        statusEl.textContent = "NORMAL (Non-Heat)";
-        statusEl.className = "card-value status-normal";
-      }
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-dark-800 border-r border-dark-700 flex flex-col hidden md:flex shrink-0">
+        <div class="p-6 border-b border-dark-700 flex items-center gap-3">
+            <i class="fa-solid fa-cow text-brand-500 text-2xl"></i>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">AgriNode AI</h1>
+                <p class="text-xs text-slate-400">Estrus Detection System</p>
+            </div>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="router('fleet')" id="nav-fleet" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-600 text-white">
+                <i class="fa-solid fa-layer-group w-5"></i> Fleet Dashboard
+            </button>
+            <button onclick="router('hardware')" id="nav-hardware" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:bg-dark-700 hover:text-white transition-colors">
+                <i class="fa-solid fa-microchip w-5"></i> Hardware & Specs
+            </button>
+        </nav>
+        <div class="p-4 border-t border-dark-700">
+            <div class="flex items-center gap-2 text-sm text-emerald-400 bg-emerald-400/10 px-3 py-2 rounded-lg">
+                <div class="pulse-dot bg-emerald-500"></div> System Online
+            </div>
+        </div>
+    </aside>
 
-      document.getElementById("estrus-confidence").textContent = `${(latest.heat_confidence * 100).toFixed(1)}%`;
-      document.getElementById("active-time").textContent = `${latest.others_minutes} min`;
-      document.getElementById("last-updated").textContent = new Date(latest.recorded_at).toLocaleTimeString();
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto overflow-x-hidden relative">
+        <!-- Mobile Header -->
+        <header class="md:hidden bg-dark-800 border-b border-dark-700 p-4 flex justify-between items-center sticky top-0 z-50">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-cow text-brand-500"></i>
+                <h1 class="font-bold">AgriNode AI</h1>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="router('fleet')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-layer-group"></i></button>
+                <button onclick="router('hardware')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-microchip"></i></button>
+            </div>
+        </header>
 
-      // Update Chart (Reverse array to render chronological left-to-right)
-      const chronological = [...data].reverse();
-      chartInstance.data.labels = chronological.map(d => new Date(d.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      chartInstance.data.datasets[0].data = chronological.map(d => d.eating_minutes);
-      chartInstance.data.datasets[1].data = chronological.map(d => d.lying_minutes);
-      chartInstance.data.datasets[2].data = chronological.map(d => d.lying_rumination_minutes);
-      chartInstance.data.datasets[3].data = chronological.map(d => d.standing_rumination_minutes);
-      chartInstance.data.datasets[4].data = chronological.map(d => d.others_minutes);
-      chartInstance.update();
+        <div id="app-content" class="p-6 md:p-8 w-full max-w-7xl mx-auto">
+            <!-- Content injected via JS -->
+            <div class="flex justify-center items-center h-64">
+                <i class="fa-solid fa-circle-notch fa-spin text-brand-500 text-3xl"></i>
+            </div>
+        </div>
+    </main>
 
-      // Update Table
-      const tbody = document.getElementById("telemetry-body");
-      tbody.innerHTML = "";
-      data.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${new Date(row.recorded_at).toLocaleString()}</td>
-          <td>${row.cow_id}</td>
-          <td>${row.eating_minutes}m</td>
-          <td>${row.lying_minutes}m</td>
-          <td>${row.lying_rumination_minutes}m</td>
-          <td>${row.standing_rumination_minutes}m</td>
-          <td>${row.others_minutes}m</td>
-          <td><span class="tag ${row.heat_detected ? 'tag-heat' : 'tag-normal'}">${row.heat_detected ? 'ESTRUS' : 'NORMAL'}</span></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+    <!-- Application Logic -->
+    <script>
+        // --- SUPABASE CONFIGURATION ---
+        const SUPABASE_URL = "https://fqvkjulnfmevufqxfyqt.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_pfsmnN_CY5YWQPYRohZ-Yg_7o1wtNgZ";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    async function loadTelemetry() {
-      const { data, error } = await supabaseClient
-        .from("cow_behavior_summary")
-        .select("*")
-        .order("recorded_at", { ascending: false })
-        .limit(15);
+        // --- GLOBAL STATE ---
+        let globalData = [];
+        let cows = {}; 
+        let activeCow = null;
+        let chartInstance = null;
+        let scene, camera, renderer, animationId; // For 3D
 
-      if (!error && data) {
-        renderUI(data);
-      }
-    }
+        // --- DATA PROCESSING ---
+        async function fetchInitialData() {
+            const { data, error } = await supabaseClient
+                .from("cow_behavior_summary")
+                .select("*")
+                .order("recorded_at", { ascending: false })
+                .limit(500); // Fetch last 500 records to build history
 
-    function subscribeRealtime() {
-      supabaseClient
-        .channel("table-db-changes")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "cow_behavior_summary" },
-          () => {
-            loadTelemetry();
-          }
-        )
-        .subscribe();
-    }
+            if (error) {
+                console.error("DB Error:", error);
+                return;
+            }
+            
+            globalData = data;
+            processCowData();
+            router('fleet'); // Load default route
+            setupRealtime();
+        }
 
-    // Startup
-    window.addEventListener("DOMContentLoaded", () => {
-      initChart();
-      loadTelemetry();
-      subscribeRealtime();
-    });
-  </script>
+        function processCowData() {
+            cows = {};
+            globalData.forEach(record => {
+                if (!cows[record.cow_id]) {
+                    cows[record.cow_id] = { records: [], latest: null, lastHeat: null, dailyActive: 0 };
+                }
+                cows[record.cow_id].records.push(record);
+            });
+
+            // Calculate metrics for each cow
+            const todayStr = new Date().toDateString();
+            
+            Object.keys(cows).forEach(id => {
+                const cow = cows[id];
+                // Sort newest first
+                cow.records.sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at));
+                cow.latest = cow.records[0];
+
+                // Find last heat
+                const heatRecord = cow.records.find(r => r.heat_detected === true);
+                cow.lastHeat = heatRecord ? new Date(heatRecord.recorded_at) : null;
+
+                // Sum daily activity
+                cow.dailyActive = cow.records
+                    .filter(r => new Date(r.recorded_at).toDateString() === todayStr)
+                    .reduce((sum, r) => sum + r.others_minutes, 0);
+            });
+        }
+
+        function setupRealtime() {
+            supabaseClient
+                .channel("public:cow_behavior_summary")
+                .on("postgres_changes", { event: "INSERT", schema: "public", table: "cow_behavior_summary" }, payload => {
+                    globalData.unshift(payload.new);
+                    processCowData();
+                    // Re-render current view seamlessly
+                    if (window.location.hash.includes('profile')) {
+                        renderProfile(activeCow);
+                    } else if (window.location.hash === '#fleet' || window.location.hash === '') {
+                        renderFleet();
+                    }
+                })
+                .subscribe();
+        }
+
+        // --- ROUTING SYSTEM ---
+        function router(view, param = null) {
+            window.location.hash = param ? `${view}/${param}` : view;
+            const content = document.getElementById('app-content');
+            content.innerHTML = ''; // clear
+            
+            // Clean up 3D memory if leaving hardware page
+            if (animationId) cancelAnimationFrame(animationId);
+
+            // Update Nav Highlighting
+            document.querySelectorAll('nav button').forEach(b => {
+                b.classList.remove('bg-brand-600', 'text-white');
+                b.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById(`nav-${view}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400');
+                activeBtn.classList.add('bg-brand-600', 'text-white');
+            }
+
+            if (view === 'fleet') renderFleet(content);
+            else if (view === 'hardware') renderHardware(content);
+            else if (view === 'profile') renderProfile(param, content);
+        }
+
+        // Listen for back/forward buttons
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.replace('#', '').split('/');
+            const view = hash[0] || 'fleet';
+            const param = hash[1] || null;
+            router(view, param);
+        });
+
+        // --- VIEWS ---
+        function renderFleet(container = document.getElementById('app-content')) {
+            const totalCows = Object.keys(cows).length;
+            const cowsInHeat = Object.values(cows).filter(c => c.latest && c.latest.heat_detected).length;
+            
+            let html = `
+                <div class="fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-white mb-2">Fleet Overview</h2>
+                        <p class="text-slate-400">Monitoring ${totalCows} active edge nodes.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl">
+                            <div class="text-slate-400 text-sm mb-1"><i class="fa-solid fa-server mr-2"></i>Active Nodes</div>
+                            <div class="text-3xl font-bold">${totalCows}</div>
+                        </div>
+                        <div class="bg-dark-800 border ${cowsInHeat > 0 ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-dark-700'} p-6 rounded-2xl">
+                            <div class="text-slate-400 text-sm mb-1"><i class="fa-solid fa-fire mr-2"></i>Active Estrus Alerts</div>
+                            <div class="text-3xl font-bold ${cowsInHeat > 0 ? 'text-red-500' : 'text-emerald-500'}">${cowsInHeat}</div>
+                        </div>
+                        <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl">
+                            <div class="text-slate-400 text-sm mb-1"><i class="fa-solid fa-microchip mr-2"></i>Inference Model</div>
+                            <div class="text-xl font-bold mt-1">Random Forest V2</div>
+                            <div class="text-xs text-brand-500 mt-1">TinyML Ready</div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold mb-4">Node Directory</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            `;
+
+            Object.keys(cows).forEach(id => {
+                const cow = cows[id];
+                const latest = cow.latest;
+                const isHeat = latest.heat_detected;
+                const heatClass = isHeat ? 'bg-red-500/10 border-red-500/50' : 'bg-dark-800 border-dark-700';
+                
+                html += `
+                    <div onclick="router('profile', '${id}')" class="${heatClass} border p-5 rounded-2xl cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-200">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="font-bold text-lg text-white">${id}</h4>
+                                <p class="text-xs text-slate-400">Last seen: ${new Date(latest.recorded_at).toLocaleTimeString()}</p>
+                            </div>
+                            ${isHeat ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded font-bold animate-pulse">ESTRUS</span>' : '<span class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-1 rounded font-bold">NORMAL</span>'}
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-400">Daily Active:</span>
+                            <span class="font-medium text-white">${cow.dailyActive.toFixed(1)} mins</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderProfile(cowId, container = document.getElementById('app-content')) {
+            activeCow = cowId;
+            const cow = cows[cowId];
+            if (!cow) {
+                container.innerHTML = `<p class="text-red-500">Node not found.</p>`;
+                return;
+            }
+
+            const latest = cow.latest;
+            const lastHeatStr = cow.lastHeat ? new Date(cow.lastHeat).toLocaleString() : 'No recent history';
+            
+            // Format data for chart (Chronological order)
+            const chartData = [...cow.records].reverse().slice(-12); // Last 12 records
+
+            container.innerHTML = `
+                <div class="fade-in">
+                    <button onclick="router('fleet')" class="text-slate-400 hover:text-white mb-6 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Fleet
+                    </button>
+                    
+                    <div class="flex justify-between items-end mb-6">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white">${cowId} Profile</h2>
+                            <p class="text-slate-400 mt-1">Detailed behavioral analytics and predictions</p>
+                        </div>
+                        ${latest.heat_detected ? '<div class="bg-red-500 text-white px-4 py-2 rounded-lg font-bold shadow-[0_0_15px_rgba(239,68,68,0.4)]"><i class="fa-solid fa-fire mr-2"></i> ESTRUS ACTIVE</div>' : ''}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-dark-800 border border-dark-700 p-5 rounded-2xl">
+                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-2">Last Heat Event</div>
+                            <div class="text-lg font-bold text-white">${lastHeatStr}</div>
+                        </div>
+                        <div class="bg-dark-800 border border-dark-700 p-5 rounded-2xl">
+                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-2">Today's Active Time</div>
+                            <div class="text-2xl font-bold text-brand-500">${cow.dailyActive.toFixed(1)} <span class="text-sm text-slate-400 font-normal">mins</span></div>
+                        </div>
+                        <div class="bg-dark-800 border border-dark-700 p-5 rounded-2xl">
+                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-2">Current Activity</div>
+                            <div class="text-2xl font-bold text-white">${latest.others_minutes > latest.eating_minutes ? 'Moving' : 'Resting/Feeding'}</div>
+                        </div>
+                        <div class="bg-dark-800 border border-dark-700 p-5 rounded-2xl">
+                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-2">Model Confidence</div>
+                            <div class="text-2xl font-bold text-white">${(latest.heat_confidence * 100).toFixed(0)}%</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl mb-8">
+                        <h3 class="text-lg font-bold mb-4">Behavior Distribution (Recent Windows)</h3>
+                        <div class="h-72 relative">
+                            <canvas id="profileChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Draw Chart.js
+            const ctx = document.getElementById('profileChart');
+            if (chartInstance) chartInstance.destroy();
+            
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(d => new Date(d.recorded_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})),
+                    datasets: [
+                        { label: 'Eating', data: chartData.map(d => d.eating_minutes), backgroundColor: '#10b981' },
+                        { label: 'Lying', data: chartData.map(d => d.lying_minutes), backgroundColor: '#64748b' },
+                        { label: 'Lying Rum.', data: chartData.map(d => d.lying_rumination_minutes), backgroundColor: '#f59e0b' },
+                        { label: 'Standing Rum.', data: chartData.map(d => d.standing_rumination_minutes), backgroundColor: '#d97706' },
+                        { label: 'Active (Walk/Other)', data: chartData.map(d => d.others_minutes), backgroundColor: '#ef4444' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, grid: { color: '#334155', drawBorder: false }, ticks: { color: '#94a3b8' } },
+                        y: { stacked: true, grid: { color: '#334155', drawBorder: false }, ticks: { color: '#94a3b8' }, title: {display: true, text: 'Minutes', color: '#94a3b8'} }
+                    },
+                    plugins: { legend: { labels: { color: '#f8fafc' } } }
+                }
+            });
+        }
+
+        // --- HARDWARE 3D PAGE ---
+        function renderHardware(container = document.getElementById('app-content')) {
+            container.innerHTML = `
+                <div class="fade-in h-full flex flex-col">
+                    <div class="mb-6">
+                        <h2 class="text-3xl font-bold text-white mb-2">Edge Node Hardware</h2>
+                        <p class="text-slate-400">ESP32-C3 SuperMini + BMI160 Wearable Design</p>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row gap-8 flex-1">
+                        <!-- 3D Viewer -->
+                        <div class="flex-1 bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden flex flex-col">
+                            <div class="p-4 border-b border-dark-700 bg-dark-900/50 flex justify-between items-center">
+                                <span class="font-bold text-sm text-slate-300"><i class="fa-solid fa-cube text-brand-500 mr-2"></i> Enclosure CAD Model</span>
+                                <span class="text-xs text-slate-500">Drag to rotate</span>
+                            </div>
+                            <div id="canvas-container" class="flex-1 relative bg-gradient-to-b from-[#1e293b] to-[#0f172a]"></div>
+                        </div>
+
+                        <!-- Specs sidebar -->
+                        <div class="w-full lg:w-80 space-y-4">
+                            <div class="bg-dark-800 border border-dark-700 p-5 rounded-2xl">
+                                <h3 class="font-bold mb-4 text-white border-b border-dark-700 pb-2">Technical Specs</h3>
+                                <ul class="space-y-3 text-sm">
+                                    <li class="flex justify-between"><span class="text-slate-400">MCU</span> <span class="font-medium text-white">ESP32-C3 SuperMini</span></li>
+                                    <li class="flex justify-between"><span class="text-slate-400">Architecture</span> <span class="font-medium text-white">32-bit RISC-V</span></li>
+                                    <li class="flex justify-between"><span class="text-slate-400">IMU Sensor</span> <span class="font-medium text-white">DFRobot BMI160</span></li>
+                                    <li class="flex justify-between"><span class="text-slate-400">Sampling Rate</span> <span class="font-medium text-white">10 Hz</span></li>
+                                    <li class="flex justify-between"><span class="text-slate-400">Comms</span> <span class="font-medium text-white">ESP-NOW / Wi-Fi</span></li>
+                                    <li class="flex justify-between"><span class="text-slate-400">Deep Sleep</span> <span class="font-medium text-emerald-400">Enabled</span></li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-dark-800 border border-dark-700 p-5 rounded-2xl">
+                                <h3 class="font-bold mb-4 text-white border-b border-dark-700 pb-2">PCB Layout Notes</h3>
+                                <p class="text-sm text-slate-400 mb-3">Custom 2-layer routing connecting the C3 I2C pins (GPIO 8/9) directly to the BMI160, optimizing space for the battery management circuit.</p>
+                                <div class="w-full h-24 bg-dark-900 rounded border border-dark-700 flex items-center justify-center text-xs text-slate-500 italic relative overflow-hidden">
+                                    <!-- Simple CSS representation of PCB traces -->
+                                    <div class="absolute inset-0 opacity-20" style="background-image: repeating-linear-gradient(45deg, #ef4444 0, #ef4444 2px, transparent 2px, transparent 8px);"></div>
+                                    <span class="z-10 bg-dark-900 px-2 rounded">U1 (ESP32) <i class="fa-solid fa-arrow-right-arrow-left text-brand-500 mx-2"></i> U2 (BMI160)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            init3D();
+        }
+
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+
+            // Scene setup
+            scene = new THREE.Scene();
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(6, 4, 8);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+            fillLight.position.set(-10, 0, -10);
+            scene.add(fillLight);
+
+            // --- Building the Enclosure Model (Based on image_d68341.png) ---
+            const enclosureGroup = new THREE.Group();
+
+            // Materials
+            const greenMat = new THREE.MeshStandardMaterial({ 
+                color: 0x3b9b4a, roughness: 0.7, metalness: 0.1 
+            });
+            const darkMat = new THREE.MeshStandardMaterial({ 
+                color: 0x2d2d2d, roughness: 0.8 
+            });
+            const orangeMat = new THREE.MeshStandardMaterial({ 
+                color: 0xd98a44, roughness: 0.6 
+            });
+
+            // 1. Main Box Shell (Simulated hollow by combining boxes)
+            const length = 5; const width = 2.5; const height = 2;
+            
+            // Outer solid box for simplicity, with a dark "lid" area to fake hollowness
+            const mainGeom = new THREE.BoxGeometry(length, height, width);
+            const mainBox = new THREE.Mesh(mainGeom, greenMat);
+            enclosureGroup.add(mainBox);
+
+            // Fake Hollow Top (Dark plane just above the top surface)
+            const topGeom = new THREE.PlaneGeometry(length - 0.4, width - 0.4);
+            const topPlane = new THREE.Mesh(topGeom, new THREE.MeshBasicMaterial({color: 0x111111}));
+            topPlane.rotation.x = -Math.PI / 2;
+            topPlane.position.y = height / 2 + 0.01;
+            enclosureGroup.add(topPlane);
+
+            // 2. Corner Screw Posts (Dark grey cylinders)
+            const postGeom = new THREE.CylinderGeometry(0.2, 0.2, height * 0.8, 16);
+            const positions = [
+                [length/2, width/2], [-length/2, width/2],
+                [length/2, -width/2], [-length/2, -width/2]
+            ];
+            positions.forEach(pos => {
+                const post = new THREE.Mesh(postGeom, darkMat);
+                post.position.set(pos[0], height/2 - (height*0.8)/2 + 0.2, pos[1]);
+                enclosureGroup.add(post);
+            });
+
+            // 3. Side Strap Loop (Orange/Brown box with a hole)
+            // Using a simple torus segment or constructed box for the loop
+            const loopGeom = new THREE.BoxGeometry(0.4, 1.2, 1);
+            const loopMesh = new THREE.Mesh(loopGeom, orangeMat);
+            loopMesh.position.set(-length/2 - 0.2, 0, 0);
+            
+            // Cutout fake
+            const holeGeom = new THREE.BoxGeometry(0.5, 0.8, 0.6);
+            const holeMesh = new THREE.Mesh(holeGeom, new THREE.MeshBasicMaterial({color: 0x0f172a})); // match background
+            holeMesh.position.set(-length/2 - 0.2, 0, 0);
+            
+            enclosureGroup.add(loopMesh);
+            enclosureGroup.add(holeMesh); // Visual trick for the hole
+
+            // 4. Direction Arrow (Etched on side)
+            const arrowShape = new THREE.Shape();
+            arrowShape.moveTo(0, 0.2);
+            arrowShape.lineTo(0.5, 0.2);
+            arrowShape.lineTo(0.5, 0.4);
+            arrowShape.lineTo(0.9, 0);
+            arrowShape.lineTo(0.5, -0.4);
+            arrowShape.lineTo(0.5, -0.2);
+            arrowShape.lineTo(0, -0.2);
+            arrowShape.lineTo(0, 0.2);
+            
+            const extrudeSettings = { depth: 0.05, bevelEnabled: false };
+            const arrowGeom = new THREE.ExtrudeGeometry(arrowShape, extrudeSettings);
+            const arrowMesh = new THREE.Mesh(arrowGeom, darkMat);
+            arrowMesh.position.set(0, 0, width/2); // Front face
+            enclosureGroup.add(arrowMesh);
+
+            scene.add(enclosureGroup);
+
+            // Interaction state
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            let targetRotation = { x: 0.5, y: -0.5 };
+            let currentRotation = { x: 0, y: 0 };
+
+            // Mouse Events
+            container.addEventListener('mousedown', (e) => { isDragging = true; });
+            container.addEventListener('mouseup', () => { isDragging = false; });
+            container.addEventListener('mouseleave', () => { isDragging = false; });
+            container.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaMove = { x: e.offsetX - previousMousePosition.x, y: e.offsetY - previousMousePosition.y };
+                    targetRotation.y += deltaMove.x * 0.01;
+                    targetRotation.x += deltaMove.y * 0.01;
+                }
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+
+            // Touch Events for mobile
+            container.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }, {passive: true});
+            container.addEventListener('touchend', () => { isDragging = false; });
+            container.addEventListener('touchmove', (e) => {
+                if (isDragging) {
+                    const deltaMove = { x: e.touches[0].clientX - previousMousePosition.x, y: e.touches[0].clientY - previousMousePosition.y };
+                    targetRotation.y += deltaMove.x * 0.01;
+                    targetRotation.x += deltaMove.y * 0.01;
+                    previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                }
+            }, {passive: true});
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                if(container) {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            });
+
+            // Auto-rotation & Render Loop
+            function animate() {
+                animationId = requestAnimationFrame(animate);
+                
+                if (!isDragging) {
+                    targetRotation.y += 0.005; // Slow auto-spin
+                }
+
+                // Smooth interpolation (lerp)
+                currentRotation.x += (targetRotation.x - currentRotation.x) * 0.1;
+                currentRotation.y += (targetRotation.y - currentRotation.y) * 0.1;
+
+                enclosureGroup.rotation.x = currentRotation.x;
+                enclosureGroup.rotation.y = currentRotation.y;
+
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        // --- STARTUP ---
+        window.onload = fetchInitialData;
+
+    </script>
 </body>
 </html>
