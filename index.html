@@ -112,7 +112,7 @@
         // --- GLOBAL STATE ---
 let scene, camera, renderer, animationId;
 const DEMO = new URLSearchParams(location.search).has('demo');   // add ?demo=1 to the URL for sample data
-let rows = [], status = {}, cows = {}, charts = [], curView = 'fleet', range = 36, filter = '';
+let rows = [], status = {}, cows = {}, charts = [], curView = 'fleet', range = 36, filter = '', show = 'all';
 const BEH = [['eating_minutes','Eating','#10b981'], ['lying_minutes','Lying','#64748b'],
   ['lying_rumination_minutes','Lying rumination','#f59e0b'],
   ['standing_rumination_minutes','Standing rumination','#d97706'], ['others_minutes','Active / other','#ef4444']];
@@ -122,6 +122,8 @@ const sum = (a, f) => a.reduce((s, r) => s + (+f(r) || 0), 0);
 const ago = d => { const m = Math.round((Date.now() - new Date(d)) / 6e4);
   return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m/60)} h ago` : `${Math.round(m/1440)} d ago`; };
 const lbl = d => { const t = new Date(d); return t.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); };
+const blk = d => { const t = new Date(d), e = new Date(+t + 72e5), f = {hour:'2-digit', minute:'2-digit'};
+  return t.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + t.toLocaleTimeString([], f) + ' – ' + e.toLocaleTimeString([], f); };
 const pill = (t, c) => `<span class="${c} text-xs px-2.5 py-1 rounded-full font-bold border">${t}</span>`;
 const STATE = { online: ['ONLINE','bg-emerald-500/10 border-emerald-500/20 text-emerald-500'],
   delayed: ['DELAYED','bg-amber-500/10 border-amber-500/30 text-amber-400'],
@@ -197,19 +199,20 @@ function route(soft = false) {
 }
 
 // --- FLEET ---
-const stat = (label, val, color, icon) => `<div class="bg-dark-800 border border-dark-700 p-5 rounded-2xl flex items-center justify-between">
+const stat = (label, val, color, icon, key) => `<div onclick="setShow('${key}')" class="cursor-pointer hover:border-brand-500 transition-all ${show === key ? 'ring-2 ring-brand-500 border-brand-500' : 'border-dark-700'} bg-dark-800 border p-5 rounded-2xl flex items-center justify-between">
   <div><div class="text-slate-400 text-xs mb-1 uppercase tracking-wider font-semibold">${label}</div>
   <div class="text-3xl font-bold ${color}">${val}</div></div><i class="fa-solid ${icon} text-xl ${color} opacity-70"></i></div>`;
 
 function cards() {
-  const list = Object.values(cows).filter(c => c.id.toLowerCase().includes(filter))
+  const okShow = c => show === 'online' ? c.state === 'online' : show === 'offline' ? c.state !== 'online' : show === 'heat' ? c.alert : true;
+  const list = Object.values(cows).filter(c => okShow(c) && c.id.toLowerCase().includes(filter))
     .sort((a, b) => b.alert - a.alert || a.id.localeCompare(b.id));
-  if (!list.length) return `<div class="col-span-full text-center p-8 text-slate-500 bg-dark-800 rounded-2xl border border-dark-700">No collars found.</div>`;
+  if (!list.length) return `<div class="col-span-full text-center p-8 text-slate-500 bg-dark-800 rounded-2xl border border-dark-700">${show === 'heat' ? 'No cows are in heat right now.' : 'No collars match.'}</div>`;
   return list.map(c => `
     <div onclick="router('profile','${esc(c.id)}')" class="${c.alert ? 'bg-red-500/5 border-red-500/50' : 'bg-dark-800 border-dark-700'} border p-5 rounded-2xl cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all">
       <div class="flex justify-between items-start mb-4">
         <div><h4 class="font-bold text-lg text-white">${esc(c.id)}</h4>
-        <p class="text-xs text-slate-500 mt-1"><i class="fa-regular fa-clock mr-1"></i>${c.seen ? 'Last upload ' + ago(c.seen) : 'Waiting for first upload'}</p></div>
+        <p class="text-xs text-slate-500 mt-1"><i class="fa-regular fa-clock mr-1"></i>${c.seen ? 'Last upload ' + ago(c.seen) : 'Waiting for first upload'}${c.latest ? ' · data through ' + new Date(+new Date(c.latest.recorded_at) + 72e5).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</p></div>
         <div class="flex flex-col items-end gap-1">${pill(...STATE[c.state])}${c.alert ? pill('ESTRUS', HEAT) : ''}</div>
       </div>
       <div class="grid grid-cols-3 gap-2 border-t border-dark-700 pt-4 text-center">
@@ -227,15 +230,20 @@ function renderFleet(el) {
     <p class="text-slate-400">${list.length} collar(s) · updates automatically${DEMO ? ' · <b class="text-amber-400">DEMO DATA</b>' : ''}</p></div>
     ${alerts ? `<div class="mb-6 p-4 rounded-xl border border-red-500/50 bg-red-500/10 text-red-300"><i class="fa-solid fa-fire mr-2"></i>${alerts} cow(s) showing estrus signs.</div>` : ''}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      ${stat('Collars', list.length, 'text-white', 'fa-satellite-dish')}
-      ${stat('Online', n('online'), 'text-emerald-500', 'fa-wifi')}
-      ${stat('Offline / delayed', n('offline') + n('delayed'), n('offline') ? 'text-amber-400' : 'text-slate-300', 'fa-plug-circle-exclamation')}
-      ${stat('Estrus alerts', alerts, alerts ? 'text-red-500' : 'text-emerald-500', 'fa-bell')}
+      ${stat('Collars', list.length, 'text-white', 'fa-satellite-dish', 'all')}
+      ${stat('Online', n('online'), 'text-emerald-500', 'fa-wifi', 'online')}
+      ${stat('Offline / delayed', n('offline') + n('delayed'), n('offline') ? 'text-amber-400' : 'text-slate-300', 'fa-plug-circle-exclamation', 'offline')}
+      ${stat('Estrus alerts', alerts, alerts ? 'text-red-500' : 'text-emerald-500', 'fa-bell', 'heat')}
     </div>
-    <div class="flex justify-between items-center mb-4 gap-4"><h3 class="text-xl font-bold text-white">Collars</h3>
+    <div class="flex justify-between items-center mb-4 gap-4"><h3 class="text-xl font-bold text-white">Collars${show !== 'all' ? ` <span class="text-sm font-normal text-slate-400">· filtered <button class="underline text-brand-500" onclick="setShow('all')">show all</button></span>` : ''}</h3>
       <input placeholder="Search…" value="${esc(filter)}" oninput="filter=this.value.toLowerCase();document.getElementById('grid').innerHTML=cards()"
       class="bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-sm w-48 outline-none focus:border-brand-500"></div>
     <div id="grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${cards()}</div></div>`;
+}
+
+function setShow(k) {
+  show = (show === k || k === 'all') ? 'all' : k;
+  renderFleet(document.getElementById('app-content'));
 }
 
 // --- PROFILE ---
@@ -273,14 +281,14 @@ function renderProfile(el, id) {
     data: { labels: x, datasets: BEH.map(([key, name, col]) => ({ label: name, data: recs.map(r => r[key]), backgroundColor: col })) },
     options: { responsive: true, maintainAspectRatio: false,
       scales: { x: { stacked: true, grid: { display: false }, ticks: tick }, y: { stacked: true, grid, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Minutes', color: '#94a3b8' } } },
-      plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', usePointStyle: true } } } } }));
+      plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', usePointStyle: true } }, tooltip: { callbacks: { title: i => blk(recs[i[0].dataIndex].recorded_at) } } } } }));
   charts.push(new Chart(document.getElementById('c2'), { type: 'line',
     data: { labels: x, datasets: [
       { label: 'Estrus probability', data: recs.map(r => r.heat_confidence), borderColor: '#38bdf8', backgroundColor: '#38bdf822', fill: true, tension: .3, spanGaps: false, pointRadius: 2 },
       { label: 'Alert level', data: recs.map(() => 0.5), borderColor: '#ef4444', borderDash: [6, 6], pointRadius: 0 }] },
     options: { responsive: true, maintainAspectRatio: false,
       scales: { x: { grid: { display: false }, ticks: tick }, y: { min: 0, max: 1, grid, ticks: { color: '#94a3b8' } } },
-      plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', usePointStyle: true } } } } }));
+      plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', usePointStyle: true } }, tooltip: { callbacks: { title: i => blk(recs[i[0].dataIndex].recorded_at) } } } } }));
 }
 
 function exportCsv(id) {
