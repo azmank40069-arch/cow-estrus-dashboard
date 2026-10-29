@@ -163,7 +163,9 @@ function build() {
     const l24 = c.recs.slice(-12), old = c.recs.slice(0, -12);
     c.eat24 = sum(l24, r => r.eating_minutes); c.ly24 = sum(l24, r => r.lying_minutes);
     c.rum24 = sum(l24, rum); c.act24 = sum(l24, r => r.others_minutes);
-    c.rumBase = old.length >= 12 ? sum(old, rum) / old.length * 12 : null;     // 7-day average per 24 h
+    const tot = r => BEH.reduce((a, [k]) => a + (+r[k] || 0), 0);
+    const oldMin = sum(old, tot);
+    c.rumBase = old.length >= 12 && oldMin > 0 ? sum(old, rum) / oldMin * sum(l24, tot) : null;   // same number of recorded minutes     // 7-day average per 24 h
     c.seen = status[c.id]?.last_upload || c.latest?.recorded_at || null;
     const m = c.seen ? (Date.now() - new Date(c.seen)) / 6e4 : 1e9;
     c.state = m < 100 ? 'online' : m < 240 ? 'delayed' : 'offline';          // uploads are hourly
