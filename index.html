@@ -53,6 +53,10 @@
             70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
+    @keyframes flowdown{to{background-position:0 14px}}
+        .flow-v{width:4px;height:40px;border-radius:2px;background:repeating-linear-gradient(180deg,#38bdf8 0 6px,transparent 6px 14px);background-size:100% 14px;animation:flowdown .8s linear infinite}
+        @media (prefers-reduced-motion:reduce){.flow-v{animation:none}}
+        details>summary::-webkit-details-marker{display:none}
     </style>
 </head>
 <body class="bg-dark-900 text-slate-200 font-sans antialiased overflow-hidden flex h-screen">
@@ -420,7 +424,9 @@ const insemChip = i => i.phase === 'over' ? '' : pill(i.label, PH[i.phase]);
 
 function planner() {
   const list = Object.values(cows).filter(c => c.insem && c.insem.phase !== 'over').sort((a, b) => a.insem.last - b.insem.last);
-  if (!list.length) return '';
+  if (!list.length) return `<div class="mb-8 bg-dark-800 border border-dark-700 rounded-2xl p-5">
+    <div class="flex items-center gap-2 mb-2"><i class="fa-solid fa-syringe text-brand-500"></i><h3 class="font-bold text-white">Insemination planner</h3></div>
+    <p class="text-sm text-slate-400">No cow is in an insemination window right now. When estrus is detected, the best time to inseminate (about 12 to 18 hours after it starts) appears here with a countdown.</p></div>`;
   return `<div class="mb-8 bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden">
     <div class="px-5 py-4 border-b border-dark-700 flex items-center gap-2"><i class="fa-solid fa-syringe text-brand-500"></i><h3 class="font-bold text-white">Insemination planner</h3></div>
     <div class="divide-y divide-dark-700">${list.map(c => { const i = c.insem; return `
@@ -706,6 +712,193 @@ function demo() {
   return { rows: out, status: st };
 }
 
+// =====================================================================
+// SYSTEM DATA-FLOW: ILLUSTRATED STEP-BY-STEP (top of Hardware page)
+// =====================================================================
+const FC = { pan: '#1e293b', ln: '#334155', br: '#38bdf8', tx: '#e2e8f0', mu: '#94a3b8', am: '#f59e0b', gr: '#10b981', rd: '#ef4444', vi: '#8b5cf6', dk: '#0f172a' };
+const FBEH = [['Eating', '#f59e0b'], ['Lying', '#38bdf8'], ['Lying rumination', '#8b5cf6'], ['Standing rumination', '#10b981'], ['Others', '#64748b']];
+const fT = (x, y, t, o = {}) => `<text x="${x}" y="${y}" fill="${o.c || FC.tx}" font-size="${o.s || 18}" font-weight="${o.w || 600}" text-anchor="${o.a || 'middle'}"${o.x || ''}>${t}</text>`;
+const fR = (x, y, w, h, f, o = {}) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.r ?? 10}" fill="${f}"${o.s ? ` stroke="${o.s}" stroke-width="${o.sw || 2}"` : ''}${o.x || ''}/>`;
+const fWave = (x0, x1, y, amp, ph = 0) => { let p = ''; const k = 250 / (4 * Math.PI); for (let x = x0; x <= x1; x += 4) p += `${x},${(y + (Math.sin((x + ph) / k) * .6 + Math.sin((x + ph) * 3 / k) * .4) * amp).toFixed(1)} `; return p; };
+const fFile = (x, y, t) => `<g transform="translate(${x},${y})"><path d="M-18,-24 h26 l10,10 v38 h-36z" fill="#f8fafc" stroke="${FC.br}" stroke-width="2"/><path d="M8,-24 v10 h10" fill="#cbd5e1"/>${fT(0, 12, t, { s: 13, c: '#0f172a', w: 700 })}</g>`;
+const fPop = (a, b, d) => `<animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;${a};${a + .02};${b};${b + .02};1" dur="${d}s" repeatCount="indefinite"/>`;
+const SV = (inner) => `<svg viewBox="0 0 800 400" class="w-full h-auto" role="img" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+
+const FSCENES = [
+  // 1. COLLAR ON THE COW
+  () => SV(`<defs><clipPath id="cw"><rect x="0" y="0" width="250" height="400"/></clipPath></defs>
+    <rect x="0" y="330" width="800" height="70" fill="#14532d" opacity=".35"/>
+    <g transform="translate(-60,20) scale(.85)">
+      ${[170, 215, 370, 415].map(x => `<rect x="${x}" y="270" width="24" height="88" rx="9" fill="#e2e8f0"/><rect x="${x}" y="345" width="24" height="14" rx="5" fill="#334155"/>`).join('')}
+      <path d="M130,205 q-45,15 -32,80" stroke="#cbd5e1" stroke-width="9" fill="none" stroke-linecap="round"/><circle cx="98" cy="290" r="11" fill="#334155"/>
+      <rect x="130" y="170" width="330" height="125" rx="60" fill="#f1f5f9"/>
+      <ellipse cx="220" cy="215" rx="42" ry="28" fill="#475569"/><ellipse cx="335" cy="250" rx="46" ry="25" fill="#475569"/><ellipse cx="405" cy="200" rx="28" ry="22" fill="#475569"/>
+      <path d="M440,175 L520,140 L548,218 L450,278 Z" fill="#f1f5f9"/>
+      <ellipse cx="585" cy="215" rx="58" ry="38" transform="rotate(25 585 215)" fill="#f1f5f9"/>
+      <ellipse cx="628" cy="242" rx="28" ry="22" fill="#fbcfe8"/><circle cx="592" cy="196" r="5" fill="#0f172a"/>
+      <ellipse cx="545" cy="168" rx="24" ry="10" transform="rotate(-30 545 168)" fill="#cbd5e1"/>
+      <rect x="474" y="150" width="26" height="112" transform="rotate(12 487 206)" fill="${FC.br}" opacity=".55"/>
+      <rect x="458" y="182" width="66" height="50" rx="18" fill="#fff" stroke="${FC.br}" stroke-width="3"/>
+      <circle cx="492" cy="207" r="5" fill="${FC.gr}"><animate attributeName="opacity" values="1;.2;1" dur="1.2s" repeatCount="indefinite"/></circle>
+      ${[0, 1].map(i => `<circle cx="492" cy="207" r="30" fill="none" stroke="${FC.br}" stroke-width="3"><animate attributeName="r" values="30;85" dur="2.4s" begin="${i * 1.2}s" repeatCount="indefinite"/><animate attributeName="opacity" values=".8;0" dur="2.4s" begin="${i * 1.2}s" repeatCount="indefinite"/></circle>`).join('')}
+    </g>
+    <path d="M360,160 L360,100" stroke="${FC.br}" stroke-width="2" stroke-dasharray="4 4"/>${fT(360, 85, 'Collar on the right neck', { s: 20 })}
+    ${fR(530, 40, 250, 150, FC.pan, { s: FC.ln })}${fT(655, 70, 'Movement, 25 times per second', { s: 15, c: FC.mu })}
+    <g transform="translate(530,0)"><g clip-path="url(#cw)"><g><animateTransform attributeName="transform" type="translate" from="0 0" to="-250 0" dur="2.5s" repeatCount="indefinite"/>
+      <polyline points="${fWave(0, 750, 100, 14)}" fill="none" stroke="${FC.br}" stroke-width="2.5"/><polyline points="${fWave(0, 750, 130, 12, 40)}" fill="none" stroke="${FC.am}" stroke-width="2.5"/><polyline points="${fWave(0, 750, 160, 10, 90)}" fill="none" stroke="${FC.vi}" stroke-width="2.5"/></g></g></g>
+    ${fR(530, 210, 250, 140, FC.pan, { s: FC.ln })}
+    <path d="M556,238 h34 l12,12 v46 h-46z" fill="#0f172a" stroke="${FC.br}" stroke-width="2.5"/>${[0, 1, 2, 3].map(i => `<rect x="${562 + i * 8}" y="242" width="4" height="12" fill="${FC.am}"/>`).join('')}
+    ${fT(620, 262, 'Saved on', { s: 16, a: 'start', c: FC.mu })}${fT(620, 284, 'the SD card', { s: 18, a: 'start' })}
+    ${fR(556, 306, 200, 14, FC.dk, { r: 7 })}<rect x="556" y="306" width="0" height="14" rx="7" fill="${FC.gr}"><animate attributeName="width" values="0;200;200" keyTimes="0;.9;1" dur="6s" repeatCount="indefinite"/></rect>
+    ${fT(655, 338, '≈ 90,200 readings = 1 hour', { s: 14, c: FC.mu })}`),
+
+  // 2. THE UPLOAD
+  () => SV(`<path id="up" d="M150,190 C300,30 500,30 650,190" fill="none" stroke="${FC.br}" stroke-width="3" stroke-dasharray="3 9" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="24" to="0" dur=".8s" repeatCount="indefinite"/></path>
+    <rect x="62" y="160" width="86" height="64" rx="22" fill="#fff" stroke="${FC.br}" stroke-width="3"/><circle cx="105" cy="192" r="6" fill="${FC.gr}"/>
+    ${fT(105, 258, 'Collar', { s: 20 })}
+    ${[0, 1, 2].map(i => `<rect x="650" y="${130 + i * 52}" width="110" height="44" rx="10" fill="${FC.pan}" stroke="${FC.ln}" stroke-width="2"/><circle cx="676" cy="${152 + i * 52}" r="5" fill="${FC.gr}"><animate attributeName="opacity" values="1;.2;1" dur="${1 + i * .4}s" repeatCount="indefinite"/></circle><rect x="696" y="${148 + i * 52}" width="50" height="8" rx="4" fill="${FC.ln}"/>`).join('')}
+    ${fT(705, 310, 'Server', { s: 20 })}
+    <g><animateMotion dur="6s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.45;1" calcMode="linear"><mpath href="#up"/></animateMotion>${fPop(0, .43, 6).replace('0;0;1;1;0;0', '1;1;1;1;0;0')}${fFile(0, 0, '1 h').replace('translate(0,0)', 'translate(0,0)')}</g>
+    ${fT(400, 150, 'Wi-Fi · once per hour · ≈ 1.08 MB', { s: 18, c: FC.br })}
+    <g><animateMotion dur="6s" repeatCount="indefinite" keyPoints="1;1;0;0" keyTimes="0;.52;.92;1" calcMode="linear"><mpath href="#up"/></animateMotion>${fPop(.5, .9, 6)}${fR(-42, -17, 84, 34, FC.gr, { r: 17 })}${fT(0, 6, '200 OK ✓', { s: 16, c: '#fff', w: 700 })}</g>
+    <g>${fPop(.92, .99, 6)}${fT(105, 285, 'file deleted ✓', { s: 15, c: FC.gr })}</g>
+    ${fT(400, 318, 'What is inside the file', { s: 17, c: FC.mu })}
+    ${fR(130, 332, 110, 44, 'rgba(56,189,248,.18)', { s: FC.br })}${fT(185, 360, 'Header 16 B', { s: 15 })}
+    ${fR(244, 332, 426, 44, FC.pan, { s: FC.ln })}${fT(457, 360, 'Readings · 12 bytes each · AX AY AZ GX GY GZ', { s: 15 })}
+    ${fT(400, 176, 'sent with the collar ID + private key', { s: 15, c: FC.mu })}`),
+
+  // 3. SERVER: RECEIVE AND SAVE
+  () => SV(`${[0, 1, 2].map(i => `<rect x="30" y="${135 + i * 62}" width="150" height="54" rx="10" fill="${FC.pan}" stroke="${FC.ln}" stroke-width="2"/><circle cx="56" cy="${162 + i * 62}" r="6" fill="${FC.gr}"><animate attributeName="opacity" values="1;.2;1" dur="${1 + i * .3}s" repeatCount="indefinite"/></circle><rect x="80" y="${158 + i * 62}" width="80" height="8" rx="4" fill="${FC.ln}"/>`).join('')}
+    ${fT(105, 345, 'Server', { s: 20 })}
+    <g><animateMotion dur="9s" repeatCount="indefinite" path="M70,40 L105,140" keyPoints="0;1;1" keyTimes="0;.1;1" calcMode="linear"/>${fPop(0, .09, 9).replace('0;0;1;1;0;0', '1;1;1;1;0;0')}${fFile(0, 0, '1 h')}</g>
+    ${fR(215, 30, 330, 330, FC.pan, { s: FC.ln })}${fT(380, 62, 'Checks, then save', { s: 18, c: FC.mu })}
+    ${['Key matches this collar', 'Format and size are valid', 'Not a duplicate upload', 'Raw copy saved to disk', 'Queued for processing'].map((t, i) => {
+      const a = (.12 + .13 * i).toFixed(2), y = 105 + i * 50;
+      return `<circle cx="248" cy="${y}" r="13" fill="none" stroke="${FC.ln}" stroke-width="2.5"/>${fT(275, y + 6, t, { s: 17, a: 'start' })}
+        <g><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;${a};${(+a + .02).toFixed(2)};.93;1" dur="9s" repeatCount="indefinite"/><circle cx="248" cy="${y}" r="13" fill="${FC.gr}"/><path d="M241,${y} l5,6 l9,-11" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`; }).join('')}
+    ${fR(585, 40, 195, 130, FC.pan, { s: FC.ln })}<path d="M612,66 h38 l10,12 h70 v66 h-118z" fill="${FC.am}" opacity=".85"/>
+    ${fT(671, 118, '.bin.gz', { s: 17, c: '#0f172a', w: 700 })}${fT(682, 160, 'Permanent raw copy', { s: 14, c: FC.mu })}
+    <g><animateMotion dur="9s" repeatCount="indefinite" path="M548,255 L640,95" keyPoints="0;0;1;1" keyTimes="0;.4;.5;1" calcMode="linear"/>${fPop(.4, .5, 9)}${fFile(0, 0, '').replace(/<text.*?<\/text>/, '')}</g>
+    ${fR(585, 190, 195, 90, FC.pan, { s: FC.ln })}${fT(682, 215, 'Waiting queue', { s: 16, c: FC.mu })}
+    ${[0, 1, 2, 3, 4].map(i => `<rect x="${600 + i * 33}" y="232" width="26" height="26" rx="6" fill="${FC.ln}"/>`).join('')}
+    <g>${fPop(.6, .98, 9)}<rect x="765" y="232" width="0" height="0"/>${fR(666, 232, 26, 26, FC.br, { r: 6 })}</g>
+    <g>${fPop(.8, .98, 9)}${fR(585, 300, 195, 52, FC.gr, { r: 14 })}${fT(682, 333, 'Reply: 200 OK', { s: 19, c: '#fff', w: 700 })}</g>`),
+
+  // 4. WHAT IS THE COW DOING
+  () => SV(`<defs><clipPath id="rv"><rect x="40" y="326" width="0" height="52"><animate attributeName="width" values="0;720;720" keyTimes="0;.85;1" dur="7s" repeatCount="indefinite"/></rect></clipPath></defs>
+    ${fT(400, 32, 'Movement signal is cut into 10-second windows', { s: 18, c: FC.mu })}
+    <polyline points="${fWave(40, 760, 100, 34)}" fill="none" stroke="${FC.br}" stroke-width="2.5" opacity=".9"/>
+    <g><animateTransform attributeName="transform" type="translate" values="0 0;580 0" dur="7s" repeatCount="indefinite"/>${fR(40, 50, 140, 100, 'rgba(56,189,248,.15)', { s: FC.br, sw: 3, r: 8 })}</g>
+    <path d="M400,160 v22" stroke="${FC.mu}" stroke-width="3"/><path d="M392,176 l8,10 l8,-10" fill="none" stroke="${FC.mu}" stroke-width="3"/>
+    ${fT(110, 215, '40 numbers', { s: 18 })}${fT(110, 238, 'per window', { s: 14, c: FC.mu })}
+    ${Array.from({ length: 40 }, (_, i) => `<rect x="${180 + (i % 20) * 12}" y="${200 + Math.floor(i / 20) * 14}" width="9" height="9" rx="2" fill="${FC.br}"><animate attributeName="opacity" values=".25;1;.25" dur="${1.2 + (i % 7) * .2}s" repeatCount="indefinite"/></rect>`).join('')}
+    <path d="M430,215 h20" stroke="${FC.mu}" stroke-width="3"/><path d="M444,208 l10,7 l-10,7" fill="none" stroke="${FC.mu}" stroke-width="3"/>
+    ${[0, 1, 2].map(i => `<g transform="translate(${480 + i * 40},225)"><path d="M0,-28 L16,10 H-16z" fill="${FC.gr}" opacity="${.5 + i * .2}"/><rect x="-3" y="10" width="6" height="14" fill="#92400e"/></g>`).join('')}
+    ${fT(520, 262, 'Random Forest · 300 trees', { s: 14, c: FC.mu })}
+    <path d="M610,215 h20" stroke="${FC.mu}" stroke-width="3"/><path d="M624,208 l10,7 l-10,7" fill="none" stroke="${FC.mu}" stroke-width="3"/>
+    ${FBEH.map((b, i) => `<g><rect x="645" y="${178 + i * 22}" width="140" height="19" rx="9" fill="${b[1]}" opacity=".25"/><rect x="645" y="${178 + i * 22}" width="140" height="19" rx="9" fill="${b[1]}"><animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;${(i * .2).toFixed(2)};${(i * .2 + .08).toFixed(2)};${(i * .2 + .18).toFixed(2)};1" dur="7s" repeatCount="indefinite"/></rect>${fT(715, 193 + i * 22, b[0], { s: 12, c: '#0b1120', w: 700 })}</g>`).join('')}
+    ${fT(400, 314, 'Result: one behaviour label every 5 seconds · ≈ 719 per hour', { s: 17, c: FC.mu })}
+    <g clip-path="url(#rv)">${[[0, 1], [80, 0], [150, 2], [235, 3], [290, 2], [370, 1], [470, 4], [520, 0], [600, 3], [660, 1]].map(([x, c], i, a) => `<rect x="${40 + x}" y="326" width="${(a[i + 1] ? a[i + 1][0] : 720) - x}" height="52" fill="${FBEH[c][1]}"/>`).join('')}</g>
+    ${fR(40, 326, 720, 52, 'none', { s: FC.ln, r: 8 })}`),
+
+  // 5. IS THE COW IN HEAT
+  () => SV(`<defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="${FC.gr}"/><stop offset=".55" stop-color="${FC.am}"/><stop offset="1" stop-color="${FC.rd}"/></linearGradient></defs>
+    ${fT(215, 36, 'Minutes per behaviour, every 2 hours', { s: 17, c: FC.mu })}
+    ${Array.from({ length: 8 }, (_, i) => {
+      const m = i >= 5 ? [16, 18, 8, 6, 72] : [26, 46, 24, 14, 10], order = [4, 3, 2, 1, 0]; let y = 270;
+      return order.map(k => { const h = m[k] * 1.4; y -= h; return `<rect x="${52 + i * 44}" y="${y.toFixed(1)}" width="36" height="${h.toFixed(1)}" fill="${FBEH[k][1]}"/>`; }).join('') + fT(70 + i * 44, 292, `${6 + i * 2}h`, { s: 13, c: FC.mu, w: 500 });
+    }).join('')}
+    <rect x="224" y="64" width="184" height="246" rx="12" fill="none" stroke="${FC.br}" stroke-width="3" stroke-dasharray="7 6"/>${fT(316, 56, '4 blocks = 8 h', { s: 15, c: FC.br })}
+    ${fR(52, 318, 356, 44, FC.pan, { s: FC.ln })}${fT(230, 346, '+ same hours 1, 2 and 3 days earlier', { s: 15, c: FC.mu })}
+    <path d="M412,170 h14" stroke="${FC.mu}" stroke-width="3"/>
+    ${fR(430, 118, 96, 120, FC.pan, { s: FC.br, sw: 2.5, r: 14 })}
+    ${[0, 1, 2].map(c => [0, 1, 2].map(r => `<circle cx="${452 + c * 26}" cy="${145 + r * 30}" r="7" fill="${FC.br}"><animate attributeName="opacity" values=".2;1;.2" dur="${1.4 + (c + r) * .25}s" repeatCount="indefinite"/></circle>`).join('')).join('')}
+    ${fT(478, 262, 'LSTM', { s: 20 })}${fT(478, 282, 'AI model', { s: 13, c: FC.mu })}
+    <path d="M530,170 h30" stroke="${FC.mu}" stroke-width="3"/><path d="M552,162 l10,8 l-10,8" fill="none" stroke="${FC.mu}" stroke-width="3"/>
+    <path d="M572,250 A95,95 0 0 1 762,250" fill="none" stroke="${FC.ln}" stroke-width="18" stroke-linecap="round"/><path d="M572,250 A95,95 0 0 1 762,250" fill="none" stroke="url(#gg)" stroke-width="18" stroke-linecap="round" opacity=".9"/>
+    <line x1="667" y1="140" x2="667" y2="162" stroke="#fff" stroke-width="3"/>${fT(667, 130, '0.5', { s: 15 })}${fT(572, 276, '0', { s: 14, c: FC.mu })}${fT(762, 276, '1', { s: 14, c: FC.mu })}
+    <g><animateTransform attributeName="transform" type="rotate" values="-75 667 250;-75 667 250;48 667 250;48 667 250;-75 667 250" keyTimes="0;.1;.5;.9;1" dur="8s" repeatCount="indefinite"/><line x1="667" y1="250" x2="667" y2="170" stroke="#fff" stroke-width="5" stroke-linecap="round"/></g><circle cx="667" cy="250" r="9" fill="#fff"/>
+    ${fT(667, 306, 'Estrus probability', { s: 17, c: FC.mu })}
+    <g>${fPop(.5, .9, 8)}${fR(572, 322, 190, 40, FC.rd, { r: 20 })}${fT(667, 349, 'ESTRUS DETECTED', { s: 17, c: '#fff', w: 700 })}</g>`),
+
+  // 6. SUPABASE
+  () => SV(`${fR(30, 150, 110, 100, FC.pan, { s: FC.ln })}${fT(85, 195, 'Server', { s: 20 })}${fT(85, 222, 'results', { s: 14, c: FC.mu })}
+    <path id="wr" d="M142,200 H265" stroke="${FC.br}" stroke-width="3" stroke-dasharray="3 9" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="24" to="0" dur=".8s" repeatCount="indefinite"/></path>
+    <circle r="7" fill="${FC.br}"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#wr"/></animateMotion></circle>
+    ${[0, 1].map(i => `<circle cx="365" cy="200" r="60" fill="none" stroke="${FC.br}" stroke-width="2"><animate attributeName="r" values="60;140" dur="3s" begin="${i * 1.5}s" repeatCount="indefinite"/><animate attributeName="opacity" values=".5;0" dur="3s" begin="${i * 1.5}s" repeatCount="indefinite"/></circle>`).join('')}
+    <path d="M270,90 v220 a95,28 0 0 0 190,0 v-220" fill="${FC.pan}" stroke="${FC.br}" stroke-width="3"/><ellipse cx="365" cy="90" rx="95" ry="28" fill="#0f172a" stroke="${FC.br}" stroke-width="3"/>
+    ${fT(365, 96, 'Supabase', { s: 18 })}
+    ${fR(285, 140, 160, 30, 'rgba(56,189,248,.35)', { r: 8 })}${fR(285, 178, 160, 30, 'rgba(56,189,248,.35)', { r: 8 })}${fR(285, 216, 160, 30, 'rgba(139,92,246,.45)', { r: 8 })}
+    ${fT(365, 160, 'cow1 · cow2', { s: 14 })}${fT(365, 198, 'cow1 · cow2', { s: 14 })}${fT(365, 236, 'cow3', { s: 14 })}
+    ${fT(365, 296, '2-hour summaries + status', { s: 13, c: FC.mu })}
+    <path d="M462,170 C510,170 520,100 565,100" fill="none" stroke="${FC.br}" stroke-width="3"/><path d="M462,232 C510,232 520,300 565,300" fill="none" stroke="${FC.vi}" stroke-width="3"/>
+    <circle r="6" fill="${FC.br}"><animateMotion dur="2.4s" repeatCount="indefinite" path="M462,170 C510,170 520,100 565,100"/></circle><circle r="6" fill="${FC.vi}"><animateMotion dur="2.4s" repeatCount="indefinite" path="M462,232 C510,232 520,300 565,300"/></circle>
+    <g transform="translate(505,140)"><rect x="-13" y="-4" width="26" height="20" rx="4" fill="${FC.am}"/><path d="M-8,-4 v-7 a8,8 0 0 1 16,0 v7" fill="none" stroke="${FC.am}" stroke-width="3"/></g>
+    <g transform="translate(505,262)"><rect x="-13" y="-4" width="26" height="20" rx="4" fill="${FC.am}"/><path d="M-8,-4 v-7 a8,8 0 0 1 16,0 v7" fill="none" stroke="${FC.am}" stroke-width="3"/></g>
+    ${fR(568, 50, 210, 100, FC.pan, { s: FC.br })}${fT(673, 82, 'Farm A login', { s: 18 })}${fT(673, 110, 'sees cow1 · cow2', { s: 16, c: FC.br })}${fT(673, 134, 'only', { s: 13, c: FC.mu })}
+    ${fR(568, 250, 210, 100, FC.pan, { s: FC.vi })}${fT(673, 282, 'Farm B login', { s: 18 })}${fT(673, 310, 'sees cow3', { s: 16, c: '#a78bfa' })}${fT(673, 334, 'only', { s: 13, c: FC.mu })}
+    ${fT(400, 380, 'The database itself blocks other farms\' data', { s: 16, c: FC.mu })}`),
+
+  // 7. DASHBOARD
+  () => SV(`${fR(40, 14, 720, 372, FC.dk, { s: FC.ln, sw: 3, r: 16 })}${fR(40, 14, 720, 34, FC.pan, { r: 16 })}${[0, 1, 2].map(i => `<circle cx="${64 + i * 18}" cy="31" r="5" fill="${['#ef4444', '#f59e0b', '#10b981'][i]}"/>`).join('')}
+    ${fR(52, 60, 108, 316, FC.pan, { r: 10 })}${['Fleet', 'Estrus History', 'System'].map((t, i) => fR(62, 74 + i * 38, 88, 26, i === 0 ? 'rgba(56,189,248,.25)' : 'transparent', { r: 8 }) + fT(106, 92 + i * 38, t, { s: 11, c: i === 0 ? FC.br : FC.mu })).join('')}
+    ${fR(176, 60, 570, 84, FC.pan, { s: FC.ln })}${fT(196, 84, 'Insemination planner', { s: 14, a: 'start' })}${fT(196, 108, 'cow2', { s: 16, a: 'start' })}
+    ${fR(260, 98, 140, 12, FC.ln, { r: 6 })}${fR(300, 98, 40, 12, FC.gr, { r: 6 })}${fR(340, 98, 40, 12, FC.am, { r: 6 })}
+    <g><animateTransform attributeName="transform" type="translate" values="0 0;100 0;0 0" dur="8s" repeatCount="indefinite"/><rect x="258" y="92" width="4" height="24" rx="2" fill="#fff"/></g>
+    ${fT(260, 134, 'onset', { s: 11, c: FC.mu, a: 'start' })}${fT(310, 134, '12 h', { s: 11, c: FC.gr, a: 'start' })}${fT(350, 134, '18 h', { s: 11, c: FC.am, a: 'start' })}
+    ${fR(560, 90, 170, 34, 'rgba(245,158,11,.15)', { s: FC.am, r: 17 })}${fT(645, 112, 'Window opens in 6 h', { s: 13, c: FC.am })}
+    ${['cow1', 'cow2', 'cow3'].map((c, i) => `${fR(176 + i * 192, 156, 180, 84, FC.pan, { s: i === 1 ? FC.rd : FC.ln, sw: i === 1 ? 3 : 2 })}${fT(194 + i * 192, 184, c, { s: 18, a: 'start' })}<circle cx="${330 + i * 192}" cy="178" r="6" fill="${FC.gr}"/>${fT(194 + i * 192, 212, i === 1 ? 'rumination low' : 'normal', { s: 12, c: FC.mu, a: 'start' })}`).join('')}
+        ${fR(458, 224, 80, 0, FC.rd, { r: 10 })}${fR(452, 166, 86, 22, FC.rd, { r: 11 })}${fT(495, 182, 'ESTRUS', { s: 12, c: '#fff', w: 700 })}
+    <rect x="368" y="156" width="180" height="84" rx="10" fill="none" stroke="${FC.rd}" stroke-width="3"><animate attributeName="opacity" values="1;.2;1" dur="1.6s" repeatCount="indefinite"/></rect>
+    ${fR(176, 252, 570, 124, FC.pan, { s: FC.ln })}${fT(196, 276, 'Estrus history · 12 months', { s: 14, a: 'start' })}
+    ${Array.from({ length: 52 }, (_, c) => Array.from({ length: 7 }, (_, r) => { const hot = [4, 25, 46].includes(c) && r > 1 && r < 5 || [11, 33].includes(c) && r === 3; return `<rect x="${196 + c * 10.5}" y="${288 + r * 11.5}" width="8.5" height="8.5" rx="2" fill="${hot ? FC.rd : 'rgba(56,189,248,.3)'}"/>`; }).join('')).join('')}`)
+];
+const FSTEPS = [
+  ['1', 'fa-cow', 'The collar', 'A small box on the cow\'s neck feels every movement 25 times per second and stores it on a memory card. About an hour of readings makes one file.'],
+  ['2', 'fa-wifi', 'The upload', 'Once an hour the collar sends that file over Wi-Fi, with its ID and private key. It deletes the file only after the server answers "200 OK".'],
+  ['3', 'fa-server', 'Server: check and save', 'The server checks the key and the file, ignores repeats, saves a permanent copy, queues the file for processing and answers "OK".'],
+  ['4', 'fa-brain', 'What is the cow doing?', 'A sliding 10-second window turns movement into 40 numbers. A Random Forest model labels each window as eating, lying, ruminating or other.'],
+  ['5', 'fa-heart-pulse', 'Is the cow in heat?', 'Behaviour is added up in 2-hour blocks. Four blocks (8 hours) go to an AI model that returns a probability. At 0.5 or more twice in a row, estrus is flagged.'],
+  ['6', 'fa-database', 'The shared database', 'Results are saved in Supabase. Each farm\'s login can read only its own cows, and open dashboards are told instantly when new data arrives.'],
+  ['7', 'fa-display', 'Your dashboard', 'You see the herd, each cow\'s behaviour, the estrus alert with the best time to inseminate, and 12 months of history.']
+];
+let flowI = 0, flowTimer = null, flowPlay = true;
+function flowHtml() {
+  return `<section class="mb-12">
+    <div class="mb-5"><h3 class="text-xl font-bold text-white">How the system works</h3>
+      <p class="text-slate-400 text-sm mt-1">One hour of a cow's life, from the collar to your screen. Use the arrows, or let it play.</p></div>
+    <div class="bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden shadow-xl max-w-5xl">
+      <div class="p-3 border-b border-dark-700 bg-dark-900 flex flex-wrap gap-1.5 justify-center" id="flow-rail">${FSTEPS.map((s, i) => `<button onclick="flowGo(${i},true)" id="fr-${i}" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-dark-700 text-slate-400 hover:text-white flex items-center gap-1.5"><i class="fa-solid ${s[1]}"></i><span class="hidden md:inline">${s[2]}</span><span class="md:hidden">${s[0]}</span></button>`).join('')}</div>
+      <div id="flow-scene" class="bg-gradient-to-br from-[#1e293b] to-[#0b1120] p-2 sm:p-4"></div>
+      <div class="p-5 border-t border-dark-700 bg-dark-900/60">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="min-w-0 flex-1"><div class="text-xs text-brand-500 font-semibold uppercase tracking-wider" id="flow-n"></div><h4 class="text-lg font-bold text-white" id="flow-t"></h4>
+            <p class="text-sm text-slate-400 mt-1 max-w-2xl" id="flow-d"></p></div>
+          <div class="flex gap-2 shrink-0">
+            <button onclick="flowStep(-1)" class="w-10 h-10 rounded-lg border border-dark-700 text-slate-300 hover:border-brand-500" aria-label="Previous step"><i class="fa-solid fa-chevron-left"></i></button>
+            <button onclick="flowToggle()" id="flow-pp" class="w-10 h-10 rounded-lg border border-dark-700 text-slate-300 hover:border-brand-500" aria-label="Play or pause"><i class="fa-solid fa-pause"></i></button>
+            <button onclick="flowStep(1)" class="w-10 h-10 rounded-lg bg-brand-600 text-white hover:bg-brand-500" aria-label="Next step"><i class="fa-solid fa-chevron-right"></i></button></div></div>
+      </div></div>
+    <h3 class="text-xl font-bold text-white mt-12 mb-1">The collar hardware</h3>
+  </section>`;
+}
+function flowGo(i, manual = false) {
+  const sc = document.getElementById('flow-scene'); if (!sc) { clearInterval(flowTimer); flowTimer = null; return; }
+  flowI = (i + FSTEPS.length) % FSTEPS.length;
+  sc.innerHTML = FSCENES[flowI]();
+  const s = FSTEPS[flowI];
+  document.getElementById('flow-n').textContent = `Step ${s[0]} of ${FSTEPS.length}`;
+  document.getElementById('flow-t').textContent = s[2]; document.getElementById('flow-d').textContent = s[3];
+  FSTEPS.forEach((_, k) => { const b = document.getElementById('fr-' + k); if (b) b.className = `px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${k === flowI ? 'border-brand-500 bg-brand-500/15 text-brand-500' : 'border-dark-700 text-slate-400 hover:text-white'}`; });
+  if (manual) { flowPlay = false; const pp = document.getElementById('flow-pp'); if (pp) pp.innerHTML = '<i class="fa-solid fa-play"></i>'; }
+  clearInterval(flowTimer); flowTimer = flowPlay ? setInterval(() => flowGo(flowI + 1), 9000) : null;
+}
+function flowStep(d) { flowGo(flowI + d, true); }
+function flowToggle() {
+  flowPlay = !flowPlay; document.getElementById('flow-pp').innerHTML = `<i class="fa-solid ${flowPlay ? 'fa-pause' : 'fa-play'}"></i>`;
+  clearInterval(flowTimer); flowTimer = flowPlay ? setInterval(() => flowGo(flowI + 1), 9000) : null;
+}
+
 // --- STARTUP ---
 let t0;
 function refreshSoon() { clearTimeout(t0); t0 = setTimeout(load, 1500); }
@@ -730,10 +923,11 @@ function renderHardware(container = document.getElementById('app-content')) {
             container.innerHTML = `
                 <div class="fade-in h-full flex flex-col min-h-screen pb-10">
                     <div class="mb-6">
-                        <h2 class="text-3xl font-bold text-white mb-2">Edge Node Hardware</h2>
-                        <p class="text-slate-400">ESP32-C3 SuperMini + BMI160 Wearable Design</p>
+                        <h2 class="text-3xl font-bold text-white mb-2">System &amp; Hardware</h2>
+                        <p class="text-slate-400">From the collar on the cow to your screen</p>
                     </div>
 
+                    ${flowHtml()}
                     <div class="flex flex-col lg:flex-row gap-8 flex-1">
                         <!-- 3D Viewer -->
                         <div class="flex-1 bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden flex flex-col shadow-xl">
@@ -772,7 +966,7 @@ function renderHardware(container = document.getElementById('app-content')) {
                 </div>
             `;
 
-            setTimeout(init3D, 100); // Small delay to ensure container is fully rendered in DOM
+            setTimeout(init3D, 100); flowGo(0); // Small delay to ensure container is fully rendered in DOM
         }
 
         function init3D() {
