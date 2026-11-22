@@ -71,10 +71,20 @@
             <button onclick="router('fleet')" id="nav-fleet" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-brand-600 text-white shadow-lg shadow-brand-500/20">
                 <i class="fa-solid fa-layer-group w-5"></i> Fleet Dashboard
             </button>
+            <button onclick="router('history')" id="nav-history" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:bg-dark-700 hover:text-white transition-colors">
+                <i class="fa-solid fa-calendar-days w-5"></i> Estrus History
+            </button>
             <button onclick="router('hardware')" id="nav-hardware" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:bg-dark-700 hover:text-white transition-colors">
                 <i class="fa-solid fa-microchip w-5"></i> Hardware & Specs
             </button>
         </nav>
+        <div class="p-4 border-t border-dark-700">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="bg-brand-500/10 text-brand-500 w-9 h-9 rounded-lg flex items-center justify-center shrink-0"><i class="fa-solid fa-warehouse"></i></div>
+                <div class="min-w-0"><div id="farm-name" class="text-sm font-semibold text-white truncate">-</div><div id="user-email" class="text-xs text-slate-500 truncate"></div></div>
+            </div>
+            <button onclick="signOut()" class="signout w-full text-xs text-slate-400 border border-dark-700 hover:border-brand-500 hover:text-white rounded-lg py-2 transition-colors"><i class="fa-solid fa-right-from-bracket mr-2"></i>Sign out</button>
+        </div>
         <div class="p-4 border-t border-dark-700">
             <div class="flex items-center gap-2 text-sm text-emerald-400 bg-emerald-400/10 px-3 py-2 rounded-lg border border-emerald-500/20">
                 <div class="pulse-dot bg-emerald-500"></div> System Online
@@ -91,7 +101,9 @@
             </div>
             <div class="flex gap-4">
                 <button onclick="router('fleet')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-layer-group text-lg"></i></button>
+                <button onclick="router('history')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-calendar-days text-lg"></i></button>
                 <button onclick="router('hardware')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-microchip text-lg"></i></button>
+                <button onclick="signOut()" class="signout text-slate-400 hover:text-white" aria-label="Sign out"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
             </div>
         </header>
 
@@ -103,10 +115,59 @@
         </div>
     </main>
 
+    <!-- Farm login overlay -->
+    <div id="auth" class="fixed inset-0 z-[100] bg-[#0b1120] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-sm">
+            <div class="flex flex-col items-center mb-8">
+                <div class="bg-brand-500/10 p-3 rounded-xl text-brand-500 mb-3"><i class="fa-solid fa-cow text-3xl"></i></div>
+                <h1 class="font-bold text-2xl text-white">AgriNode AI</h1>
+                <p class="text-sm text-brand-500 font-medium">Estrus Telemetry</p>
+            </div>
+
+            <div id="auth-wait" class="flex justify-center py-8"><i class="fa-solid fa-circle-notch fa-spin text-brand-500 text-3xl"></i></div>
+
+            <form id="auth-login" class="hidden bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-xl space-y-4" onsubmit="return doLogin(event)">
+                <div><h2 class="text-lg font-bold text-white">Sign in to your farm</h2>
+                <p class="text-xs text-slate-500 mt-1">Use the email and password your farm account was set up with.</p></div>
+                <div>
+                    <label for="auth-email" class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1.5">Email</label>
+                    <input id="auth-email" type="email" autocomplete="username" required class="w-full bg-dark-900 border border-dark-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label for="auth-pass" class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1.5">Password</label>
+                    <div class="relative">
+                        <input id="auth-pass" type="password" autocomplete="current-password" required class="w-full bg-dark-900 border border-dark-700 rounded-lg pl-3 pr-10 py-2.5 text-sm outline-none focus:border-brand-500">
+                        <button type="button" onclick="togglePw()" aria-label="Show or hide password" class="absolute right-0 top-0 h-full px-3 text-slate-500 hover:text-white"><i id="pw-eye" class="fa-solid fa-eye"></i></button>
+                    </div>
+                </div>
+                <div id="auth-msg" class="text-sm min-h-[1.25rem] text-red-400" role="alert"></div>
+                <button id="auth-btn" type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-lg py-2.5 text-sm transition-colors">Sign in</button>
+                <button type="button" onclick="forgot()" class="w-full text-xs text-slate-400 hover:text-brand-500">Forgot password?</button>
+            </form>
+
+            <form id="auth-reset" class="hidden bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-xl space-y-4" onsubmit="return setNewPw(event)">
+                <h2 class="text-lg font-bold text-white">Choose a new password</h2>
+                <input id="new-pass" type="password" autocomplete="new-password" placeholder="New password (8+ characters)" required class="w-full bg-dark-900 border border-dark-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500">
+                <input id="new-pass2" type="password" autocomplete="new-password" placeholder="Repeat new password" required class="w-full bg-dark-900 border border-dark-700 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-brand-500">
+                <div id="reset-msg" class="text-sm text-red-400 min-h-[1.25rem]" role="alert"></div>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-lg py-2.5 text-sm">Save password</button>
+            </form>
+
+            <div id="auth-nofarm" class="hidden bg-dark-800 border border-dark-700 rounded-2xl p-6 shadow-xl text-center space-y-4">
+                <i class="fa-solid fa-triangle-exclamation text-amber-400 text-2xl"></i>
+                <h2 class="text-lg font-bold text-white">No farm linked to this account</h2>
+                <p class="text-sm text-slate-400">You are signed in, but this account has not been assigned to a farm yet. Please contact your AgriNode administrator.</p>
+                <button onclick="signOut()" class="w-full border border-dark-700 hover:border-brand-500 text-slate-200 rounded-lg py-2.5 text-sm">Sign out</button>
+            </div>
+        </div>
+    </div>
+
+
     <script>
         // --- SUPABASE CONFIGURATION ---
         const SUPABASE_URL = "https://fqvkjulnfmevufqxfyqt.supabase.co";
         const SUPABASE_KEY = "sb_publishable_pfsmnN_CY5YWQPYRohZ-Yg_7o1wtNgZ";
+        let recovering = /type=recovery/.test(location.hash), entered = false, farm = null, sessionEmail = '';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // --- GLOBAL STATE ---
@@ -163,15 +224,14 @@ function build() {
     const l24 = c.recs.slice(-12), old = c.recs.slice(0, -12);
     c.eat24 = sum(l24, r => r.eating_minutes); c.ly24 = sum(l24, r => r.lying_minutes);
     c.rum24 = sum(l24, rum); c.act24 = sum(l24, r => r.others_minutes);
-    const tot = r => BEH.reduce((a, [k]) => a + (+r[k] || 0), 0);
-    const oldMin = sum(old, tot);
-    c.rumBase = old.length >= 12 && oldMin > 0 ? sum(old, rum) / oldMin * sum(l24, tot) : null;   // same number of recorded minutes     // 7-day average per 24 h
+    c.rumBase = old.length >= 12 ? sum(old, rum) / old.length * 12 : null;     // 7-day average per 24 h
     c.seen = status[c.id]?.last_upload || c.latest?.recorded_at || null;
     const m = c.seen ? (Date.now() - new Date(c.seen)) / 6e4 : 1e9;
     c.state = m < 100 ? 'online' : m < 240 ? 'delayed' : 'offline';          // uploads are hourly
     c.alert = c.recs.slice(-3).some(r => r.heat_detected);
     c.lastHeat = [...c.recs].reverse().find(r => r.heat_detected)?.recorded_at || null;
     c.risk = c.latest?.heat_confidence ?? null;
+    c.ep = episodes(c.recs); c.insem = insemInfo(c);
   });
   const off = Object.values(cows).filter(c => c.state === 'offline').length;
   const el = document.querySelector('aside .pulse-dot')?.parentElement;
@@ -185,6 +245,7 @@ function router(v, p = null) {
 }
 window.addEventListener('hashchange', () => route());
 function route(soft = false) {
+  if (!entered) return;
   const [v = 'fleet', p = ''] = (location.hash.slice(1) || 'fleet').split('/');
   if (soft && v === 'hardware' && curView === 'hardware') return;           // don't rebuild the 3D view on refresh
   curView = v;
@@ -196,6 +257,7 @@ function route(soft = false) {
   if (nb) { nb.classList.remove('text-slate-400'); nb.classList.add('bg-brand-600', 'text-white', 'shadow-lg', 'shadow-brand-500/20'); }
   const el = document.getElementById('app-content');
   if (v === 'hardware') renderHardware(el);
+  else if (v === 'history') renderHistory(el);
   else if (v === 'profile') renderProfile(el, decodeURIComponent(p));
   else renderFleet(el);
 }
@@ -215,7 +277,7 @@ function cards() {
       <div class="flex justify-between items-start mb-4">
         <div><h4 class="font-bold text-lg text-white">${esc(c.id)}</h4>
         <p class="text-xs text-slate-500 mt-1"><i class="fa-regular fa-clock mr-1"></i>${c.seen ? 'Last upload ' + ago(c.seen) : 'Waiting for first upload'}${c.latest ? ' · data through ' + new Date(+new Date(c.latest.recorded_at) + 72e5).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</p></div>
-        <div class="flex flex-col items-end gap-1">${pill(...STATE[c.state])}${c.alert ? pill('ESTRUS', HEAT) : ''}</div>
+        <div class="flex flex-col items-end gap-1">${pill(...STATE[c.state])}${c.alert ? pill('ESTRUS', HEAT) : ''}${c.insem ? insemChip(c.insem) : ''}</div>
       </div>
       <div class="grid grid-cols-3 gap-2 border-t border-dark-700 pt-4 text-center">
         ${[['Rumination', c.rum24], ['Eating', c.eat24], ['Active', c.act24]].map(([k, v]) =>
@@ -231,6 +293,7 @@ function renderFleet(el) {
     <div class="mb-6"><h2 class="text-3xl font-bold text-white mb-1">Fleet Overview</h2>
     <p class="text-slate-400">${list.length} collar(s) · updates automatically${DEMO ? ' · <b class="text-amber-400">DEMO DATA</b>' : ''}</p></div>
     ${alerts ? `<div class="mb-6 p-4 rounded-xl border border-red-500/50 bg-red-500/10 text-red-300"><i class="fa-solid fa-fire mr-2"></i>${alerts} cow(s) showing estrus signs.</div>` : ''}
+    ${planner()}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       ${stat('Collars', list.length, 'text-white', 'fa-satellite-dish', 'all')}
       ${stat('Online', n('online'), 'text-emerald-500', 'fa-wifi', 'online')}
@@ -270,13 +333,15 @@ function renderProfile(el, id) {
       ${k('Active, last 24 h', Math.round(c.act24) + ' min', 'Walking / other')}
       ${k('Estrus probability', c.risk === null ? '—' : Math.round(c.risk * 100) + '%', c.lastHeat ? 'Last alert ' + lbl(c.lastHeat) : 'No alerts', c.alert ? 'text-red-400' : 'text-white')}
     </div>
+    ${insemCard(c)}
     <div class="flex gap-2 mb-4">${[[12,'24 h'],[36,'3 days'],[84,'7 days']].map(([n, t]) =>
       `<button onclick="range=${n};route()" class="px-3 py-1.5 rounded-lg text-sm border ${range === n ? 'bg-brand-600 border-brand-600 text-white' : 'border-dark-700 text-slate-400'}">${t}</button>`).join('')}</div>
     <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl mb-6"><h3 class="font-bold text-white mb-4">Behavior per 2-hour block</h3><div class="h-72"><canvas id="c1"></canvas></div></div>
     <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl mb-6"><h3 class="font-bold text-white mb-1">Estrus probability</h3>
       <p class="text-xs text-slate-500 mb-4">Alert when the probability stays above 50% for two blocks in a row.</p><div class="h-52"><canvas id="c2"></canvas></div></div>
     <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl"><h3 class="font-bold text-white mb-3">Recent alerts</h3>
-      ${events.length ? events.map(r => `<div class="text-sm text-slate-300 py-1 border-b border-dark-700">${lbl(r.recorded_at)} <span class="text-slate-500">· ${Math.round((r.heat_confidence || 0) * 100)}%</span></div>`).join('') : '<p class="text-sm text-slate-500">No alerts yet.</p>'}</div></div>`;
+      ${events.length ? events.map(r => `<div class="text-sm text-slate-300 py-1 border-b border-dark-700">${lbl(r.recorded_at)} <span class="text-slate-500">· ${Math.round((r.heat_confidence || 0) * 100)}%</span></div>`).join('') : '<p class="text-sm text-slate-500">No alerts yet.</p>'}</div>
+    <div id="yearbox" class="mt-6"></div></div>`;
 
   const x = recs.map(r => lbl(r.recorded_at)), tick = { color: '#94a3b8', maxTicksLimit: 8 }, grid = { color: '#334155' };
   charts.push(new Chart(document.getElementById('c1'), { type: 'bar',
@@ -291,6 +356,7 @@ function renderProfile(el, id) {
     options: { responsive: true, maintainAspectRatio: false,
       scales: { x: { grid: { display: false }, ticks: tick }, y: { min: 0, max: 1, grid, ticks: { color: '#94a3b8' } } },
       plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', usePointStyle: true } }, tooltip: { callbacks: { title: i => blk(recs[i[0].dataIndex].recorded_at) } } } } }));
+  loadYear(c.id);
 }
 
 function exportCsv(id) {
@@ -301,18 +367,340 @@ function exportCsv(id) {
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `${id}_behavior.csv`; a.click();
 }
 
-// --- DEMO DATA (open the site with ?demo=1) ---
-function demo() {
-  const out = [], st = {}, now = new Date(); now.setMinutes(0, 0, 0); now.setHours(now.getHours() - now.getHours() % 2);
-  ['cow1', 'cow2', 'cow3', 'cow4'].forEach((id, k) => {
-    for (let i = 84; i >= 1; i--) {
-      const t = new Date(now - i * 72e5), h = t.getHours(), night = h < 6 || h >= 20, hot = k === 1 && i <= 3;
+// =====================================================================
+// ESTRUS EPISODES, INSEMINATION TIMING, 1-YEAR HISTORY
+// =====================================================================
+const H = 36e5, DAY = 864e5, SPAN = 364;          // SPAN = days of history (52 weeks)
+// Hours after the estimated START of estrus. General dairy-cattle guidance
+// (ovulation roughly 28 h after onset). Change these to match your vet's advice.
+const INSEM = { open: 12, best: 18, last: 24, ovul: 28, over: 36 };
+const MERGE_H = 12;            // detections closer together than this belong to one estrus
+const PH = {
+  wait: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
+  now:  'bg-emerald-500/15 border-emerald-500/40 text-emerald-400',
+  late: 'bg-orange-500/10 border-orange-500/30 text-orange-400',
+  over: 'bg-slate-500/10 border-slate-500/30 text-slate-400' };
+const dt = ms => new Date(ms).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+const dd = ms => new Date(ms).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+const ddt = ms => dd(ms) + ' ' + new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const hrs = h => { const m = Math.max(Math.round(h * 60), 0); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : ''); };
+const dayKey = d => { const t = new Date(d); return t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate(); };
+const AI_NOTE = 'Times are estimates from the collar\'s 2-hour blocks (start of estrus can be off by a few hours). Confirm with standing heat or your vet before inseminating.';
+
+// Group heat detections into estrus episodes. recs must be sorted oldest -> newest.
+function episodes(recs) {
+  const byT = new Map(recs.map(r => [+new Date(r.recorded_at), r]));
+  const out = []; let cur = null;
+  recs.filter(r => r.heat_detected).forEach(r => {
+    const t = +new Date(r.recorded_at), p = +r.heat_confidence || 0;
+    if (cur && t - cur.endT <= MERGE_H * H) { cur.endT = t; cur.peak = Math.max(cur.peak, p); }
+    else out.push(cur = { firstT: t, endT: t, peak: p });
+  });
+  out.forEach(e => {
+    let t = e.firstT;                                   // the alert fires on the 2nd block above 50%: step back to the 1st
+    for (;;) { const p = byT.get(t - 2 * H); if (p && (+p.heat_confidence || 0) >= 0.5) { t -= 2 * H; e.peak = Math.max(e.peak, +p.heat_confidence); } else break; }
+    e.onset = t; e.end = e.endT + 2 * H;
+  });
+  return out;
+}
+
+function insemInfo(c) {
+  const e = c.ep.at(-1); if (!e) return null;
+  const h = (Date.now() - e.onset) / H;
+  if (h < 0 || h > INSEM.over) return null;
+  const at = k => e.onset + INSEM[k] * H;
+  let phase, label;
+  if (h < INSEM.open) { phase = 'wait'; label = `Window opens in ${hrs(INSEM.open - h)}`; }
+  else if (h < INSEM.best) { phase = 'now'; label = 'Inseminate now'; }
+  else if (h < INSEM.last) { phase = 'late'; label = `Closing: ${hrs(INSEM.last - h)} left`; }
+  else { phase = 'over'; label = 'Window passed'; }
+  return { e, h, phase, label, open: at('open'), best: at('best'), last: at('last'), ovul: at('ovul') };
+}
+const insemChip = i => i.phase === 'over' ? '' : pill(i.label, PH[i.phase]);
+
+function planner() {
+  const list = Object.values(cows).filter(c => c.insem && c.insem.phase !== 'over').sort((a, b) => a.insem.last - b.insem.last);
+  if (!list.length) return '';
+  return `<div class="mb-8 bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden">
+    <div class="px-5 py-4 border-b border-dark-700 flex items-center gap-2"><i class="fa-solid fa-syringe text-brand-500"></i><h3 class="font-bold text-white">Insemination planner</h3></div>
+    <div class="divide-y divide-dark-700">${list.map(c => { const i = c.insem; return `
+      <div onclick="router('profile','${esc(c.id)}')" class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 cursor-pointer hover:bg-dark-700/40">
+        <div class="min-w-[8rem]"><div class="font-semibold text-white">${esc(c.id)}</div><div class="text-xs text-slate-500">Estrus began about ${dt(i.e.onset)}</div></div>
+        <div class="text-sm text-slate-300"><span class="text-slate-500">Best window</span> ${dt(i.open)} – ${dt(i.best)}</div>
+        ${pill(i.label, PH[i.phase])}</div>`; }).join('')}</div>
+    <p class="px-5 py-3 text-xs text-slate-500 border-t border-dark-700">${AI_NOTE}</p></div>`;
+}
+
+function insemCard(c) {
+  const i = c.insem; if (!i) return '';
+  const o = i.e.onset, pos = h => Math.min(Math.max(h / INSEM.over * 100, 0), 100);
+  const seg = (a, b, col) => `<div class="absolute top-0 h-full" style="left:${pos(a)}%;width:${pos(b) - pos(a)}%;background:${col}"></div>`;
+  const tick = (h, t) => `<span class="absolute text-[10px] text-slate-500 whitespace-nowrap" style="left:${pos(h)}%;transform:translateX(-${pos(h)}%)">${t}</span>`;
+  const tile = (k, v, hl) => `<div class="bg-dark-900 border ${hl ? 'border-emerald-500/40' : 'border-dark-700'} rounded-xl p-3"><div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">${k}</div><div class="text-sm font-semibold text-white mt-1">${v}</div></div>`;
+  return `<div class="bg-dark-800 border ${i.phase === 'now' ? 'border-emerald-500/50' : 'border-dark-700'} p-6 rounded-2xl mb-8">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+      <h3 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-syringe text-brand-500"></i> Optimal insemination time</h3>${pill(i.label, PH[i.phase])}</div>
+    <p class="text-xs text-slate-500 mb-5">Estrus began about ${dt(o)} (${hrs(i.h)} ago) · expected ovulation about ${dt(i.ovul)}</p>
+    <div class="relative h-3 rounded-full overflow-hidden bg-dark-900 mb-1">
+      ${seg(0, INSEM.open, '#334155')}${seg(INSEM.open, INSEM.best, '#10b981')}${seg(INSEM.best, INSEM.last, '#f59e0b')}${seg(INSEM.last, INSEM.over, '#334155')}</div>
+    <div class="relative h-4 mb-1"><div class="absolute -top-[22px] w-0.5 h-5 bg-white rounded" style="left:${pos(i.h)}%"></div></div>
+    <div class="relative h-4 mb-5">${tick(0, 'onset')}${tick(INSEM.open, INSEM.open + ' h')}${tick(INSEM.best, INSEM.best + ' h')}${tick(INSEM.last, INSEM.last + ' h')}${tick(INSEM.over, INSEM.over + ' h')}</div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      ${tile('Window opens', dt(i.open), i.phase === 'wait')}${tile('Best until', dt(i.best), i.phase === 'now')}${tile('Last chance', dt(i.last), i.phase === 'late')}</div>
+    <p class="text-xs text-slate-500 mt-4">${AI_NOTE}</p></div>`;
+}
+
+// ---------- per-cow 12-month history (profile page) ----------
+let yearCache = {};
+async function fetchYear(id) {
+  const since = new Date(Date.now() - SPAN * DAY).toISOString(); let all = [], from = 0;
+  for (;;) {
+    const { data, error } = await supabaseClient.from('cow_behavior_summary').select('recorded_at,heat_confidence,heat_detected')
+      .eq('cow_id', id).gte('recorded_at', since).order('recorded_at', { ascending: true }).range(from, from + 999);
+    if (error) throw error; all = all.concat(data); if (data.length < 1000) break; from += 1000;
+  }
+  return all;
+}
+async function loadYear(id) {
+  const box = document.getElementById('yearbox'); if (!box) return;
+  box.innerHTML = `<div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl text-slate-500 text-sm"><i class="fa-solid fa-circle-notch fa-spin text-brand-500 mr-2"></i>Loading 12-month history…</div>`;
+  try {
+    let y = yearCache[id];
+    if (!y || Date.now() - y.t > 6e5) { const r = DEMO ? demoYear(id) : await fetchYear(id); y = yearCache[id] = { t: Date.now(), rows: r, ep: episodes(r) }; }
+    if (document.getElementById('yearbox') !== box) return;            // page was re-rendered or left
+    box.innerHTML = yearHtml(id, y);
+    const sc = box.querySelector('.cal-scroll'); if (sc) sc.scrollLeft = sc.scrollWidth;
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = `<div class="text-red-400 p-4 bg-red-500/10 rounded-lg">Could not load history. <button class="underline" onclick="loadYear('${esc(id)}')">Retry</button></div>`;
+  }
+}
+
+const cycleStats = eps => {
+  const g = eps.slice(1).map((e, i) => (e.onset - eps[i].onset) / DAY);
+  const ok = g.filter(x => x >= 17 && x <= 26);
+  return { gaps: g, avg: ok.length ? ok.reduce((a, b) => a + b, 0) / ok.length : null };
+};
+
+function yearHtml(id, y) {
+  const eps = y.ep, days = {};
+  y.rows.forEach(r => { const d = days[dayKey(r.recorded_at)] ||= { max: 0, heat: false }; d.max = Math.max(d.max, +r.heat_confidence || 0); if (r.heat_detected) d.heat = true; });
+  eps.forEach(e => { for (let t = e.onset; t < e.end; t += 2 * H) { const d = days[dayKey(t)] ||= { max: 0, heat: false }; d.heat = true; d.max = Math.max(d.max, e.peak); } });
+  const { gaps, avg } = cycleStats(eps), last = eps.at(-1), cov = Object.keys(days).length;
+  let next = '<span class="text-slate-400">Not enough history yet</span>', nextSub = 'Needs at least one detected estrus';
+  if (last) {
+    const mid = last.onset + (avg || 21) * DAY;
+    next = `${dd(mid - 3 * DAY)} – ${dd(mid + 3 * DAY)}`;
+    nextSub = (avg ? `Based on this cow's average cycle of ${avg.toFixed(1)} days` : 'Based on a typical 21-day cycle');
+    if (mid + 3 * DAY < Date.now()) { next = '<span class="text-amber-400">Range has passed</span>'; nextSub = 'Estrus may have been missed, or the cow may be pregnant'; }
+  }
+  // calendar heat-map
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = new Date(today); start.setDate(start.getDate() - (SPAN - 1));
+  const first = new Date(start); first.setDate(first.getDate() - first.getDay());
+  let cells = '', labels = '', i = 0, prevM = -1;
+  for (const d = new Date(first); d <= today; d.setDate(d.getDate() + 1), i++) {
+    if (i % 7 === 0 && d.getMonth() !== prevM) { prevM = d.getMonth(); labels += `<span style="grid-column:${i / 7 + 1}" class="text-[10px] text-slate-500 whitespace-nowrap">${d.toLocaleDateString([], { month: 'short' })}</span>`; }
+    if (d < start) { cells += '<div></div>'; continue; }
+    const x = days[dayKey(d)]; let bg, tip, ring = '';
+    if (x && x.heat) { bg = '#ef4444'; tip = `Estrus (peak ${Math.round(x.max * 100)}%)`; }
+    else if (x) { bg = 'rgba(56,189,248,.35)'; tip = 'Monitored, no estrus detected'; }
+    else { bg = '#0f172a'; tip = 'No data'; ring = ';box-shadow:inset 0 0 0 1px #334155'; }
+    cells += `<div title="${dd(+d)}: ${tip}" style="background:${bg}${ring};border-radius:3px"></div>`;
+  }
+  const cols = Math.ceil(i / 7), n = eps.length;
+  const stat = (k, v, s) => `<div class="bg-dark-900 border border-dark-700 rounded-xl p-4"><div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">${k}</div><div class="text-xl font-bold text-white mt-1">${v}</div><div class="text-xs text-slate-500 mt-1">${s}</div></div>`;
+  const legend = (bg, t, ring = '') => `<span class="inline-flex items-center gap-1.5"><span style="background:${bg};${ring};width:10px;height:10px;border-radius:3px;display:inline-block"></span>${t}</span>`;
+  return `<div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div><h3 class="font-bold text-white">Estrus history · last 12 months</h3>
+      <p class="text-xs text-slate-500">${cov} of ${SPAN} days have data</p></div>
+      <button onclick="exportEvents('${esc(id)}')" class="text-sm bg-dark-900 border border-dark-700 px-3 py-2 rounded-lg hover:border-brand-500"><i class="fa-solid fa-download mr-2"></i>Export events</button></div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      ${stat('Estrus events', n, 'in the last 12 months')}
+      ${stat('Last estrus', last ? dd(last.onset) : '—', last ? Math.round((Date.now() - last.onset) / DAY) + ' days ago' : 'None recorded')}
+      ${stat('Average cycle', avg ? avg.toFixed(1) + ' d' : '—', 'Normal is about 18–24 days')}
+      ${stat('Next expected', `<span class="text-base">${next}</span>`, nextSub)}</div>
+    <div class="cal-scroll overflow-x-auto pb-2"><div style="width:max-content">
+      <div style="display:grid;grid-template-columns:repeat(${cols},12px);gap:3px;margin-bottom:4px">${labels}</div>
+      <div style="display:grid;grid-template-rows:repeat(7,12px);grid-auto-flow:column;grid-auto-columns:12px;gap:3px">${cells}</div></div></div>
+    <div class="flex flex-wrap gap-4 text-xs text-slate-400 mt-3 mb-6">${legend('#ef4444', 'Estrus')}${legend('rgba(56,189,248,.35)', 'Monitored, no estrus')}${legend('#0f172a', 'No data', 'box-shadow:inset 0 0 0 1px #334155')}</div>
+    ${n ? `<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase tracking-wider text-slate-500 border-b border-dark-700">
+      <th class="py-2 pr-4 font-semibold">Estrus began</th><th class="py-2 pr-4 font-semibold">Duration</th><th class="py-2 pr-4 font-semibold">Peak</th><th class="py-2 font-semibold">Since previous</th></tr></thead><tbody>
+      ${eps.map((e, k) => `<tr class="border-b border-dark-700/60 text-slate-300"><td class="py-2 pr-4">${ddt(e.onset)}</td><td class="py-2 pr-4">${hrs((e.end - e.onset) / H)}</td><td class="py-2 pr-4">${Math.round(e.peak * 100)}%</td><td class="py-2">${k ? Math.round(gaps[k - 1]) + ' days' : '—'}</td></tr>`).reverse().join('')}</tbody></table></div>
+      <p class="text-xs text-slate-500 mt-3">Intervals far from 21 days (for example 10 or 40) usually mean a missed or false detection.</p>`
+    : '<p class="text-sm text-slate-500">No estrus detected in the last 12 months.</p>'}</div>`;
+}
+
+function download(name, text) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' })); a.download = name; a.click();
+}
+function exportEvents(id) {
+  const eps = id ? (yearCache[id]?.ep || []).map((e, k, a) => ({ cow: id, ...e, gap: k ? (e.onset - a[k - 1].onset) / DAY : null })) : (hist ? hist.eps.filter(e => !hCow || e.cow === hCow) : []);
+  const head = 'cow_id,estrus_start,estrus_end,duration_h,peak_probability_pct,days_since_previous';
+  download(`${id || hCow || 'all'}_estrus_events.csv`, [head, ...eps.map(e => [e.cow, new Date(e.onset).toISOString(), new Date(e.end).toISOString(),
+    ((e.end - e.onset) / H).toFixed(1), Math.round(e.peak * 100), e.gap === null ? '' : e.gap.toFixed(1)].join(','))].join('\n'));
+}
+
+// ---------- fleet-wide history page ----------
+let hist = null, hCow = '';
+async function fetchHist() {
+  const since = new Date(Date.now() - SPAN * DAY).toISOString(); let all = [], from = 0;
+  for (;;) {
+    const { data, error } = await supabaseClient.from('cow_behavior_summary').select('cow_id,recorded_at,heat_confidence,heat_detected')
+      .gte('recorded_at', since).or('heat_detected.eq.true,heat_confidence.gte.0.5')
+      .order('recorded_at', { ascending: true }).order('cow_id').range(from, from + 999);
+    if (error) throw error; all = all.concat(data); if (data.length < 1000) break; from += 1000;
+  }
+  return all;
+}
+async function loadHistory() {
+  if (hist && Date.now() - hist.t < 3e5) return hist;
+  const r = DEMO ? Object.values(demoYearAll()).flat().filter(x => x.heat_detected || x.heat_confidence >= .5) : await fetchHist();
+  const by = {}; r.forEach(x => (by[x.cow_id] ||= []).push(x));
+  const eps = [];
+  Object.entries(by).forEach(([id, rs]) => { const e = episodes(rs); e.forEach((x, i) => eps.push({ cow: id, ...x, gap: i ? (x.onset - e[i - 1].onset) / DAY : null })); });
+  eps.sort((a, b) => b.onset - a.onset);
+  return hist = { t: Date.now(), eps };
+}
+function renderHistory(el) {
+  el.innerHTML = `<div class="fade-in"><div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <div><h2 class="text-3xl font-bold text-white mb-1">Estrus History</h2><p class="text-slate-400">Last 12 months${DEMO ? ' · <b class="text-amber-400">DEMO DATA</b>' : ''}</p></div>
+    <div class="flex gap-2"><select onchange="hCow=this.value;paintHistory(hist)" id="hsel" class="bg-dark-800 border border-dark-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500"></select>
+    <button onclick="exportEvents(null)" class="text-sm bg-dark-800 border border-dark-700 px-3 py-2 rounded-lg hover:border-brand-500"><i class="fa-solid fa-download mr-2"></i>Export CSV</button></div></div>
+    <div id="histbody"><div class="flex justify-center items-center h-48"><i class="fa-solid fa-circle-notch fa-spin text-brand-500 text-3xl"></i></div></div></div>`;
+  loadHistory().then(h => { if (curView === 'history') paintHistory(h); })
+    .catch(e => { console.error(e); const b = document.getElementById('histbody'); if (b) b.innerHTML = `<div class="text-red-400 p-4 bg-red-500/10 rounded-lg">Could not load history. <button class="underline" onclick="route()">Retry</button></div>`; });
+}
+function paintHistory(h) {
+  const box = document.getElementById('histbody'); if (!box || curView !== 'history') return;
+  charts.forEach(c => c.destroy()); charts = [];
+  const ids = [...new Set([...Object.keys(cows), ...h.eps.map(e => e.cow)])].sort();
+  document.getElementById('hsel').innerHTML = `<option value="">All cows</option>` + ids.map(i => `<option value="${esc(i)}" ${i === hCow ? 'selected' : ''}>${esc(i)}</option>`).join('');
+  const list = hCow ? h.eps.filter(e => e.cow === hCow) : h.eps;
+  const ok = list.map(e => e.gap).filter(g => g !== null && g >= 17 && g <= 26), avg = ok.length ? ok.reduce((a, b) => a + b, 0) / ok.length : null;
+  const k = (l, v, s) => `<div class="bg-dark-800 border border-dark-700 p-5 rounded-2xl"><div class="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-2">${l}</div><div class="text-2xl font-bold text-white">${v}</div><div class="text-xs text-slate-500 mt-1">${s}</div></div>`;
+  const shown = list.slice(0, 100);
+  box.innerHTML = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      ${k('Estrus events', list.length, 'last 12 months')}
+      ${k('Cows with an event', new Set(list.map(e => e.cow)).size, `of ${ids.length} collar(s)`)}
+      ${k('Average cycle', avg ? avg.toFixed(1) + ' d' : '—', 'Normal is about 18–24 days')}
+      ${k('In estrus now', Object.values(cows).filter(c => c.alert && (!hCow || c.id === hCow)).length, 'live')}</div>
+    <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl mb-6"><h3 class="font-bold text-white mb-1">Estrus events per 4 weeks</h3>
+      <p class="text-xs text-slate-500 mb-4">Each bar is a 28-day period; the last bar ends today.</p><div class="h-60"><canvas id="hc"></canvas></div></div>
+    <div class="bg-dark-800 border border-dark-700 p-6 rounded-2xl"><h3 class="font-bold text-white mb-3">Events</h3>
+      ${shown.length ? `<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs uppercase tracking-wider text-slate-500 border-b border-dark-700">
+        <th class="py-2 pr-4 font-semibold">Cow</th><th class="py-2 pr-4 font-semibold">Estrus began</th><th class="py-2 pr-4 font-semibold">Duration</th><th class="py-2 pr-4 font-semibold">Peak</th><th class="py-2 font-semibold">Since previous</th></tr></thead><tbody>
+        ${shown.map(e => `<tr onclick="router('profile','${esc(e.cow)}')" class="border-b border-dark-700/60 text-slate-300 cursor-pointer hover:bg-dark-700/40"><td class="py-2 pr-4 font-semibold text-white">${esc(e.cow)}</td><td class="py-2 pr-4">${ddt(e.onset)}</td><td class="py-2 pr-4">${hrs((e.end - e.onset) / H)}</td><td class="py-2 pr-4">${Math.round(e.peak * 100)}%</td><td class="py-2">${e.gap === null ? '—' : Math.round(e.gap) + ' days'}</td></tr>`).join('')}</tbody></table></div>
+        ${list.length > shown.length ? `<p class="text-xs text-slate-500 mt-3">Showing the newest 100 of ${list.length}. Export CSV for all.</p>` : ''}`
+      : '<p class="text-sm text-slate-500">No estrus events recorded in the last 12 months.</p>'}</div>
+    <p class="text-xs text-slate-500 mt-4">Events are detected by the AI model and may include missed or false detections.</p>`;
+  const end = Date.now(), starts = Array.from({ length: 13 }, (_, i) => end - (13 - i) * 28 * DAY);
+  const counts = starts.map(s => list.filter(e => e.onset >= s && e.onset < s + 28 * DAY).length);
+  const tick = { color: '#94a3b8' };
+  charts.push(new Chart(document.getElementById('hc'), { type: 'bar',
+    data: { labels: starts.map(s => new Date(s).toLocaleDateString([], { day: 'numeric', month: 'short' })), datasets: [{ label: 'Estrus events', data: counts, backgroundColor: '#ef4444', borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: tick }, y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { ...tick, precision: 0 } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { title: i => `${dd(starts[i[0].dataIndex])} – ${dd(starts[i[0].dataIndex] + 28 * DAY - 1)}` } } } } }));
+}
+
+// =====================================================================
+// FARM LOGIN
+// =====================================================================
+const $ = id => document.getElementById(id);
+function authPane(name) {
+  $('auth').classList.remove('hidden');
+  ['wait', 'login', 'reset', 'nofarm'].forEach(p => $('auth-' + p).classList.toggle('hidden', p !== name));
+  if (name === 'login') setTimeout(() => $('auth-email')?.focus(), 50);
+}
+function authMsg(text, bad = true) { const m = $('auth-msg'); m.textContent = text; m.className = 'text-sm min-h-[1.25rem] ' + (bad ? 'text-red-400' : 'text-emerald-400'); }
+function togglePw() { const p = $('auth-pass'); p.type = p.type === 'password' ? 'text' : 'password'; $('pw-eye').className = 'fa-solid ' + (p.type === 'password' ? 'fa-eye' : 'fa-eye-slash'); }
+async function doLogin(e) {
+  e.preventDefault(); const btn = $('auth-btn'); authMsg('');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+  const { error } = await supabaseClient.auth.signInWithPassword({ email: $('auth-email').value.trim(), password: $('auth-pass').value });
+  btn.disabled = false; btn.textContent = 'Sign in';
+  if (error) authMsg(/rate|too many/i.test(error.message) ? 'Too many attempts. Please wait a minute and try again.' : 'Incorrect email or password.');
+  return false;
+}
+async function forgot() {
+  const em = $('auth-email').value.trim(); if (!em) { authMsg('Enter your email above first.'); return; }
+  await supabaseClient.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname });
+  authMsg('If that email has an account, a reset link is on its way.', false);
+}
+async function setNewPw(e) {
+  e.preventDefault(); const a = $('new-pass').value, b = $('new-pass2').value, m = $('reset-msg');
+  if (a.length < 8) { m.textContent = 'Use at least 8 characters.'; return false; }
+  if (a !== b) { m.textContent = 'The two passwords do not match.'; return false; }
+  const { error } = await supabaseClient.auth.updateUser({ password: a });
+  if (error) { m.textContent = 'Could not change the password. Request a new reset link.'; return false; }
+  recovering = false; history.replaceState(null, '', location.pathname + location.search); enter();
+  return false;
+}
+async function signOut() { if (!DEMO) await supabaseClient.auth.signOut(); }
+function leave() {
+  stop(); entered = false; recovering = false; location.hash = '';
+  $('auth-pass').value = ''; authMsg(''); authPane('login');
+}
+async function enter() {
+  if (entered) return; entered = true;
+  try {
+    if (!DEMO) {
+      const r = await supabaseClient.from('farm_members').select('role, farms(name)').limit(1);
+      if (r.error) throw r.error;
+      if (!r.data.length) { entered = false; authPane('nofarm'); return; }
+      farm = { name: r.data[0].farms?.name || 'My farm' };
+    }
+    $('farm-name').textContent = farm.name; $('user-email').textContent = sessionEmail;
+    document.querySelectorAll('.signout').forEach(b => b.classList.toggle('hidden', DEMO));
+    $('auth').classList.add('hidden'); start();
+  } catch (e) {
+    console.error(e); entered = false; authPane('login'); authMsg('Could not load your farm. Please try again.');
+  }
+}
+function initAuth() {
+  if (DEMO) { farm = { name: 'Demo farm' }; sessionEmail = 'Sample data'; enter(); return; }
+  authPane('wait');
+  supabaseClient.auth.onAuthStateChange((ev, s) => setTimeout(() => {          // deferred: never call Supabase inside this callback
+    if (ev === 'SIGNED_OUT') leave();
+    else if (!s) { recovering = false; if (!entered) authPane('login'); }
+    else if (ev === 'PASSWORD_RECOVERY' || recovering) { recovering = true; authPane('reset'); }
+    else { sessionEmail = s.user.email || ''; enter(); }
+  }, 0));
+}
+
+// =====================================================================
+// DEMO DATA (open the site with ?demo=1)
+// =====================================================================
+let DEMO_YEAR = null;
+function demoYearAll() {
+  if (DEMO_YEAR) return DEMO_YEAR;
+  const now = new Date(); now.setMinutes(0, 0, 0); now.setHours(now.getHours() - now.getHours() % 2);
+  const T0 = +now, out = {};
+  const plan = { cow1: { last: 17 * DAY, len: 7, days: 364 }, cow2: { last: 6 * H, len: 3, days: 364 },
+                 cow3: { last: 14 * H, len: 7, days: 364 }, cow4: { last: 9 * DAY, len: 8, days: 300 } };
+  Object.entries(plan).forEach(([id, p]) => {
+    const onsets = []; let t = T0 - p.last;
+    while (t > T0 - p.days * DAY) { onsets.push(t); t -= (21 + Math.round(Math.random() * 4 - 1.5)) * DAY; if (Math.random() < .08) t -= 21 * DAY; }
+    const rows = [];
+    for (let i = p.days * 12; i >= 1; i--) {
+      const ts = T0 - i * 2 * H, hr = new Date(ts).getHours(), night = hr < 6 || hr >= 20;
+      const ei = onsets.findIndex((o, j) => ts >= o && ts < o + (j === 0 ? p.len : 6 + j % 3) * 2 * H), hot = ei >= 0;
       const e = night ? 4 : 18 + Math.random() * 10, lr = night ? 45 + Math.random() * 15 : 12 + Math.random() * 10,
             sr = night ? 6 : 14 + Math.random() * 8, o = Math.random() * (night ? 5 : 14) + (hot ? 35 : 0);
-      out.push({ cow_id: id, recorded_at: t.toISOString(), eating_minutes: e, lying_minutes: Math.max(120 - e - lr - sr - o, 0),
+      rows.push({ cow_id: id, recorded_at: new Date(ts).toISOString(), eating_minutes: e, lying_minutes: Math.max(120 - e - lr - sr - o, 0),
         lying_rumination_minutes: lr, standing_rumination_minutes: sr, others_minutes: o,
-        heat_detected: hot, heat_confidence: i <= 70 ? (hot ? .8 : Math.random() * .2) : null });
+        heat_detected: hot && ts !== onsets[ei], heat_confidence: hot ? .62 + Math.random() * .3 : Math.random() * .25 });
     }
+    out[id] = rows;
+  });
+  return DEMO_YEAR = out;
+}
+const demoYear = id => demoYearAll()[id] || [];
+function demo() {
+  const all = demoYearAll(), out = [], st = {};
+  Object.entries(all).forEach(([id, rs], k) => {
+    out.push(...rs.slice(-96));
     st[id] = { cow_id: id, last_upload: new Date(Date.now() - (k === 3 ? 9 * 36e5 : (k + 1) * 8 * 6e4)).toISOString() };
   });
   return { rows: out, status: st };
@@ -321,15 +709,21 @@ function demo() {
 // --- STARTUP ---
 let t0;
 function refreshSoon() { clearTimeout(t0); t0 = setTimeout(load, 1500); }
+let chan = null, poll = null;
 function start() {
   load();
   if (!DEMO) {
-    supabaseClient.channel('live')
+    chan = supabaseClient.channel('live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cow_behavior_summary' }, refreshSoon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'device_status' }, refreshSoon)
       .subscribe();
-    setInterval(load, 120000);                                              // fallback if realtime drops
+    poll = setInterval(load, 120000);                                       // fallback if realtime drops
   }
+}
+function stop() {
+  clearTimeout(t0); clearInterval(poll); poll = null;
+  if (chan) { supabaseClient.removeChannel(chan); chan = null; }
+  rows = []; status = {}; cows = {}; hist = null; yearCache = {};
 }
 
 function renderHardware(container = document.getElementById('app-content')) {
@@ -556,7 +950,7 @@ function renderHardware(container = document.getElementById('app-content')) {
         }
 
         // --- STARTUP ---
-        window.onload = start;
+        window.onload = initAuth;
 
     </script>
 </body>
